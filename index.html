@@ -33,10 +33,7 @@ h2{margin:0;font-size:18px;color:#222}
 .nome{min-height:44px;border-radius:6px;border:1px solid #c4ccd6;background:#fff;color:#222;font-size:15px;text-align:left;padding:0 14px}
 .nome.sel{border:2px solid #1f3a5f;background:#e8edf3;color:#1f3a5f;font-weight:bold}
 .dica{margin:6px 0 0;font-size:12px;color:#1f3a5f;min-height:16px}
-.sep{display:flex;align-items:center;gap:10px;font-size:12px;color:#4f5d6b;margin-top:2px}
-.sep:before,.sep:after{content:'';flex:1;height:1px;background:#c4ccd6}
-.clientes{display:flex;gap:8px}
-.clientes .nome{flex:1;text-align:center;padding:0 8px;font-size:14px}
+.link-cliente{align-self:center;background:none;border:0;color:#1f3a5f;font-size:14px;text-decoration:underline;padding:8px 12px}
 .campo{display:flex;align-items:center;border:1px solid #c4ccd6;border-radius:6px;min-height:44px;padding:0 6px 0 14px;gap:8px}
 .campo input{flex:1;min-width:0;border:0;outline:0;font-size:16px;background:transparent;color:#222}
 .olho{width:44px;height:44px;border:0;background:transparent;display:flex;align-items:center;justify-content:center}
@@ -135,8 +132,8 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
       <p class="dica" id="dica"></p>
     </div>
     <div id="bloco-cliente-sel" hidden>
-      <div class="rotulo">Entrando como cliente:</div>
-      <div style="font-size:16px;font-weight:bold;color:#1f3a5f;margin-top:4px" id="cliente-nome"></div>
+      <div style="font-size:16px;font-weight:bold;color:#1f3a5f">Acesso de cliente</div>
+      <div class="rotulo" style="margin-top:4px">Digite somente a senha.</div>
     </div>
     <div id="bloco-senha">
       <label class="rotulo" for="senha" style="display:block;margin-bottom:6px">Senha</label>
@@ -149,8 +146,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     </div>
     <p class="erro" id="erro" hidden></p>
     <button class="entrar" type="submit" id="btn-entrar">Entrar</button>
-    <div class="sep" id="sep-cliente" hidden>Sou cliente</div>
-    <div class="clientes" id="clientes" hidden></div>
+    <button type="button" class="link-cliente" id="sou-cliente">Sou cliente</button>
     <p class="nota">Você fica conectado neste aparelho até tocar em "Sair".</p>
   </form>
 </section>
@@ -303,8 +299,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 
   /* ---------- LOGIN ---------- */
   var listaNomes = [];     // equipe (quem digita o nome)
-  var listaClientes = [];  // clientes (botões)
-  var clienteSel = '';
+  var modoCliente = false;
   var promessaNomes = null;
 
   function mostrarErroLogin(msg) {
@@ -334,17 +329,15 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     atualizarDica();
   }
 
-  function escolherCliente(n) {
-    clienteSel = clienteSel === n ? '' : n;
+  function definirModoCliente(sim) {
+    modoCliente = sim;
     $('erro').hidden = true;
-    $('bloco-usuario').hidden = !!clienteSel;
-    $('bloco-cliente-sel').hidden = !clienteSel;
-    $('cliente-nome').textContent = clienteSel;
-    Array.prototype.forEach.call(document.querySelectorAll('#clientes .nome'), function (c) {
-      c.classList.toggle('sel', c.textContent === clienteSel);
-    });
+    $('bloco-usuario').hidden = sim;
+    $('bloco-cliente-sel').hidden = !sim;
+    $('sou-cliente').textContent = sim ? 'Voltar ao login da equipe' : 'Sou cliente';
     $('senha').value = '';
-    $(clienteSel ? 'senha' : 'usuario').focus();
+    $('senha').type = 'password';
+    $(sim ? 'senha' : 'usuario').focus();
   }
 
   function montarNomes(dados) {
@@ -355,19 +348,6 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
         if (clientes.indexOf(n) < 0 && !vistos[n]) { vistos[n] = true; listaNomes.push(n); }
       });
     });
-    listaClientes = clientes;
-    var box = $('clientes');
-    box.innerHTML = '';
-    clientes.forEach(function (n) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'nome';
-      b.textContent = n;
-      b.addEventListener('click', function () { escolherCliente(n); });
-      box.appendChild(b);
-    });
-    box.hidden = !clientes.length;
-    $('sep-cliente').hidden = !clientes.length;
     corrigirCampo();
   }
 
@@ -381,7 +361,8 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   }
 
   function mostrarLogin(msg) {
-    clienteSel = '';
+    modoCliente = false;
+    $('sou-cliente').textContent = 'Sou cliente';
     $('usuario').value = '';
     $('dica').textContent = '';
     $('bloco-usuario').hidden = false;
@@ -395,6 +376,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     carregarNomes();
   }
 
+  $('sou-cliente').addEventListener('click', function () { definirModoCliente(!modoCliente); });
   $('usuario').addEventListener('input', atualizarDica);
   $('usuario').addEventListener('blur', corrigirCampo);
 
@@ -405,11 +387,15 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     $('erro').hidden = true;
     btn.disabled = true;
     btn.textContent = 'Entrando…';
-    var pronto = promessaNomes || carregarNomes();
+    var pronto = modoCliente ? Promise.resolve() : (promessaNomes || carregarNomes());
     pronto.then(function () {
-      var nome = clienteSel || acharNome($('usuario').value);
+      if (modoCliente) {
+        if (!$('senha').value) throw new Error('Digite a senha.');
+        return api({ acao: 'entrarCliente', senha: $('senha').value, aparelho: aparelho() });
+      }
+      var nome = acharNome($('usuario').value);
       if (!nome) throw new Error($('usuario').value.trim() ? 'Usuário não encontrado.' : 'Digite seu usuário.');
-      if (!clienteSel) $('usuario').value = nome;
+      $('usuario').value = nome;
       return api({ acao: 'entrar', nome: nome, senha: $('senha').value, aparelho: aparelho() });
     }).then(function (d) {
       TOKEN = d.token;
