@@ -19,6 +19,7 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f4f5f7;color:#222}
 button{font-family:inherit;cursor:pointer}
 [hidden]{display:none!important}
 h2{margin:0;font-size:18px;color:#222}
+.pc{display:none}
 
 /* LOGIN */
 #tela-login{min-height:100dvh;background:#1f3a5f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}
@@ -37,10 +38,10 @@ h2{margin:0;font-size:18px;color:#222}
 .erro{margin:0;font-size:13px;color:#b03a2e;text-align:center}
 .teste{background:#fdf0dc;color:#6b4700;font-size:12px;border-radius:6px;padding:8px 10px;text-align:center;line-height:1.4}
 
-/* APP */
+/* APP (CELULAR) */
 #tela-app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 .topo{background:#1f3a5f;padding:calc(16px + env(safe-area-inset-top)) 20px 18px;border-radius:0 0 20px 20px;display:flex;align-items:center;gap:12px}
-.topo img{width:44px;height:36px;object-fit:contain;display:block}
+.topo .folha{width:44px;height:36px;object-fit:contain;display:block}
 .saud{flex:1;min-width:0;display:flex;flex-direction:column}
 .saud small{font-size:13px;color:#d3deeb}
 .saud strong{font-size:20px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -49,8 +50,9 @@ h2{margin:0;font-size:18px;color:#222}
 .corpo{flex:1;min-height:0;overflow:auto;padding:22px 20px 16px}
 .painel{display:flex;flex-direction:column;gap:22px;max-width:520px;margin:0 auto}
 .grade{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 0}
-.sis{display:flex;flex-direction:column;align-items:center;gap:8px;color:#222;font-size:13px;text-align:center;line-height:1.25;background:none;border:0;padding:0}
+.sis{grid-column:var(--c);display:flex;flex-direction:column;align-items:center;gap:8px;color:#222;font-size:13px;text-align:center;line-height:1.25;background:none;border:0;padding:0}
 .sis .ic{width:80px;height:80px;border-radius:22px;background:#fff;border:2px solid #1f3a5f;display:flex;align-items:center;justify-content:center}
+.sis .desc{display:none}
 .cartao{background:#fff;border:1px solid #c4ccd6;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
 .cartao-t{font-size:15px;font-weight:bold;color:#1f3a5f}
 .filtro{display:flex;background:#e8edf3;border-radius:10px;padding:3px;gap:3px}
@@ -71,8 +73,38 @@ nav.abas button{flex:1;min-height:48px;display:flex;flex-direction:column;align-
 nav.abas button.on{color:#1f3a5f;font-weight:bold}
 #aviso{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;max-width:90%;text-align:center}
 #folha-notif{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
-#folha-notif .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px}
-.notif{border-top:1px solid #e1e6ec;padding-top:10px;font-size:14px;line-height:1.35}
+#folha-notif .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px}
+.ni{display:flex;gap:10px;align-items:flex-start;border-top:1px solid #e1e6ec;padding-top:8px;margin-top:8px}
+.ni i{flex:none;width:8px;height:8px;border-radius:4px;background:#b03a2e;margin-top:6px}
+.ni div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ni div span:first-child{font-size:14px;line-height:1.3;color:#222}
+.ni div span:last-child{font-size:12px;color:#4f5d6b}
+
+/* PC (TELA LARGA) */
+@media (min-width:900px){
+  .cel{display:none!important}
+  .titulo-pc{display:inline}
+  .topo{border-radius:0;min-height:72px;padding:0 32px;gap:24px;justify-content:space-between}
+  .logo-pc{display:block;height:42px;width:auto}
+  .usr-pc{display:flex;align-items:center;gap:16px;color:#fff;font-size:15px}
+  .usr-pc button{background:none;border:0;color:#d3deeb;font-size:15px;text-decoration:underline;padding:6px 0}
+  nav.abas{display:none}
+  .corpo{padding:28px 32px 32px}
+  #painel-tarefas,#painel-perfil{display:none!important}
+  #painel-inicio{display:grid!important;max-width:1240px;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto 212px auto;gap:16px 32px;align-items:stretch}
+  #painel-inicio>h2{grid-column:1 / -1;grid-row:1;font-size:20px;color:#1f3a5f}
+  .grade{grid-column:1;grid-row:2;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;min-width:0}
+  .sis{grid-column:var(--cp);width:100%;height:100%;background:#fff;border:1px solid #c4ccd6;border-radius:14px;padding:16px 14px;gap:8px;overflow:hidden}
+  .sis .ic{width:72px;height:72px;border-radius:20px}
+  .sis .ic svg{width:44px;height:44px}
+  .sis .nm{font-size:15px;font-weight:bold;color:#1f3a5f;line-height:1.25}
+  .sis .desc{display:block;font-size:12px;color:#4f5d6b;line-height:1.35}
+  .caixa-notif{display:flex;grid-column:2;grid-row:2;flex-direction:column;overflow:auto;background:#fff;border:1px solid #c4ccd6;border-radius:14px;padding:12px 18px}
+  .caixa-notif .nh{display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:bold;color:#1f3a5f}
+  .caixa-notif .nb{min-width:22px;height:22px;border-radius:11px;background:#b03a2e;color:#fff;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center;padding:0 6px}
+  .cartao{grid-column:1 / -1;grid-row:3;padding:16px 18px}
+  .cartao .filtro{max-width:360px}
+}
 </style>
 </head>
 <body>
@@ -105,18 +137,28 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 <!-- APP -->
 <section id="tela-app" hidden>
   <header class="topo">
-    <img src="folha-branca.png" alt="ENGELIX">
-    <div class="saud"><small id="saudacao">Olá,</small><strong id="nome-topo"></strong></div>
-    <button class="sino" id="sino" type="button" aria-label="Notificações">
+    <img class="folha cel" src="folha-branca.png" alt="ENGELIX">
+    <div class="saud cel"><small id="saudacao">Olá,</small><strong id="nome-topo"></strong></div>
+    <button class="sino cel" id="sino" type="button" aria-label="Notificações">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-      <span class="badge">3</span>
+      <span class="badge" id="badge-cel">3</span>
     </button>
+    <img class="logo-pc pc" src="logo-branco.png" alt="ENGELIX">
+    <div class="usr-pc pc">
+      <span id="nome-pc"></span>
+      <button type="button" id="alterar-senha">alterar senha</button>
+      <button type="button" id="sair-pc">sair</button>
+    </div>
   </header>
 
   <main class="corpo" id="corpo">
     <div class="painel" id="painel-inicio">
-      <h2>Sistemas</h2>
+      <h2><span class="cel">Sistemas</span><span class="pc titulo-pc">ENGELIX Engenharia</span></h2>
       <div class="grade" id="grade"></div>
+      <section class="caixa-notif pc">
+        <div class="nh"><span>Notificações</span><span class="nb" id="badge-pc">3</span></div>
+        <div id="lista-notif-pc"></div>
+      </section>
       <div class="cartao">
         <div class="cartao-t">Minhas tarefas</div>
         <div class="filtro" data-filtro></div>
@@ -156,10 +198,8 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 <div id="folha-notif" hidden>
   <div class="conteudo">
     <h2>Notificações</h2>
-    <div class="notif">Notificação de exemplo 1</div>
-    <div class="notif">Notificação de exemplo 2</div>
-    <div class="notif">Notificação de exemplo 3</div>
-    <button class="sair" id="fechar-notif" type="button">Fechar</button>
+    <div id="lista-notif-cel"></div>
+    <button class="sair" id="fechar-notif" type="button" style="margin-top:12px">Fechar</button>
   </div>
 </div>
 
@@ -180,16 +220,22 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   };
 
   var SISTEMAS = [
-    { nome: 'Controle de Projetos', icone: 'controle' },
-    { nome: 'Memoriais', icone: 'memo' },
-    { nome: 'Carga Térmica', icone: 'carga' },
-    { nome: 'E-mail', icone: 'email' }
+    { nome: 'Controle de Projetos', icone: 'controle', desc: 'Tarefas, revisões e resumo das obras' },
+    { nome: 'Memoriais', icone: 'memo', desc: 'Memoriais descritivos e pareceres' },
+    { nome: 'Carga Térmica', icone: 'carga', desc: 'Cálculo de carga térmica e ar-condicionado' },
+    { nome: 'E-mail', icone: 'email', desc: 'Webmail UOL (login próprio do UOL)' }
   ];
 
   var TAREFAS = [
     { t: 'Tarefa de exemplo 1', s: '[Projeto] · prazo [data]', papel: 'resp' },
     { t: 'Tarefa de exemplo 2', s: '[Projeto] · prazo [data]', papel: 'apoio' },
     { t: 'Tarefa de exemplo 3', s: '[Projeto] · prazo [data]', papel: 'resp' }
+  ];
+
+  var NOTIFS = [
+    ['Tarefa atribuída a você', '[Projeto] · há 10 min'],
+    ['Nova entrega registrada', '[Projeto] · há 1 h'],
+    ['Notificação de exemplo', 'ontem']
   ];
 
   var FILTROS = [['todas', 'Todas'], ['resp', 'Responsável'], ['apoio', 'Apoio']];
@@ -263,7 +309,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   });
 
   /* ---------- SISTEMAS (grade sem espaço vazio) ---------- */
-  function colunas(n) {
+  function colunasCel(n) {
     var c = [], i;
     if (n === 1) return ['span 6'];
     if (n === 2) return ['span 3', 'span 3'];
@@ -276,24 +322,65 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     return c;
   }
 
+  function colunasPc(n) {
+    var c = [], i;
+    if (n <= 4) {
+      for (i = 0; i < n; i++) c.push('span ' + (12 / n));
+      return c;
+    }
+    for (i = 0; i < n; i++) c.push('span 4');
+    var resto = n % 3;
+    if (resto === 1) c[n - 1] = '5 / span 4';
+    if (resto === 2) c[n - 2] = '3 / span 4';
+    return c;
+  }
+
   function montarGrade() {
     var g = $('grade');
-    var col = colunas(SISTEMAS.length);
+    var col = colunasCel(SISTEMAS.length);
+    var colPc = colunasPc(SISTEMAS.length);
     g.innerHTML = '';
     SISTEMAS.forEach(function (s, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'sis';
-      b.style.gridColumn = col[i];
+      b.style.setProperty('--c', col[i]);
+      b.style.setProperty('--cp', colPc[i]);
       b.innerHTML = '<span class="ic"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1f3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONES[s.icone] + '</svg></span>';
       var rot = document.createElement('span');
+      rot.className = 'nm';
       rot.textContent = s.nome;
       b.appendChild(rot);
+      var d = document.createElement('span');
+      d.className = 'desc';
+      d.textContent = s.desc;
+      b.appendChild(d);
       b.addEventListener('click', function () {
         avisar('Em breve: "' + s.nome + '" vai abrir aqui dentro do app.');
       });
       g.appendChild(b);
     });
+  }
+
+  /* ---------- NOTIFICAÇÕES ---------- */
+  function desenharNotifs() {
+    ['lista-notif-pc', 'lista-notif-cel'].forEach(function (id) {
+      var box = $(id);
+      box.innerHTML = '';
+      NOTIFS.forEach(function (n) {
+        var d = document.createElement('div');
+        d.className = 'ni';
+        var p = document.createElement('i');
+        var t = document.createElement('div');
+        var a = document.createElement('span'); a.textContent = n[0];
+        var b = document.createElement('span'); b.textContent = n[1];
+        t.appendChild(a); t.appendChild(b);
+        d.appendChild(p); d.appendChild(t);
+        box.appendChild(d);
+      });
+    });
+    $('badge-cel').textContent = NOTIFS.length;
+    $('badge-pc').textContent = NOTIFS.length;
   }
 
   /* ---------- TAREFAS ---------- */
@@ -334,7 +421,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     });
   }
 
-  /* ---------- ABAS ---------- */
+  /* ---------- ABAS (CELULAR) ---------- */
   function irPara(aba) {
     ['inicio', 'tarefas', 'perfil'].forEach(function (a) {
       $('painel-' + a).hidden = a !== aba;
@@ -358,19 +445,26 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   function mostrarApp(nome) {
     $('saudacao').textContent = saudacao();
     $('nome-topo').textContent = nome;
+    $('nome-pc').textContent = nome;
     $('nome-perfil').textContent = nome;
     $('avatar').textContent = nome.charAt(0).toUpperCase();
     montarGrade();
     montarFiltros();
     desenharTarefas();
+    desenharNotifs();
     irPara('inicio');
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
   }
 
-  $('sair').addEventListener('click', function () {
+  function sair() {
     limparSessao();
     mostrarLogin();
+  }
+  $('sair').addEventListener('click', sair);
+  $('sair-pc').addEventListener('click', sair);
+  $('alterar-senha').addEventListener('click', function () {
+    avisar('Em breve: alterar senha.');
   });
 
   $('sino').addEventListener('click', function () { $('folha-notif').hidden = false; });
