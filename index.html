@@ -87,6 +87,26 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 .ni div span:first-child{font-size:14px;line-height:1.3;color:#222}
 .ni div span:last-child{font-size:12px;color:#4f5d6b}
 
+/* TAREFAS REAIS (etapa 3) */
+#lista-inicio{display:flex;flex-direction:column;gap:10px}
+.obra-bt{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;background:#fff;border:2px solid #1f3a5f;border-radius:12px;padding:10px 14px;text-align:left;color:#222}
+.obra-bt .o{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.obra-bt .o span:first-child{font-size:15px;font-weight:bold;color:#1f3a5f}
+.obra-bt .o span:last-child{font-size:12px;color:#4f5d6b}
+.obra-bt .seta{flex:none;font-size:24px;color:#1f3a5f}
+.obra-t{font-size:15px;font-weight:bold;color:#1f3a5f;margin-top:18px;padding-bottom:4px;border-bottom:2px solid #1f3a5f}
+.obra-t:first-child{margin-top:0}
+.grupo-tf{font-size:12px;font-weight:bold;color:#4f5d6b;margin-top:10px;text-transform:uppercase}
+button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;padding:10px 0 0;margin-top:12px;text-align:left;font:inherit;color:inherit}
+.filtros-campos{display:flex;flex-direction:column;gap:8px}
+.filtros-campos select{width:100%;min-height:44px;border:1px solid #c4ccd6;border-radius:8px;background:#fff;color:#222;font-size:14px;padding:0 10px}
+.limpar{align-self:flex-start;background:none;border:0;color:#1f3a5f;font-size:14px;text-decoration:underline;padding:8px 0}
+#folha-tarefa{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
+#folha-tarefa .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px;max-height:85dvh;overflow:auto}
+.det{display:flex;flex-direction:column;gap:2px;border-top:1px solid #e1e6ec;padding-top:8px;margin-top:8px}
+.det small{font-size:12px;color:#4f5d6b}
+.det span{font-size:15px;color:#222;line-height:1.35;white-space:pre-wrap}
+
 /* PC (TELA LARGA) */
 @media (min-width:900px){
   .cel{display:none!important}
@@ -100,7 +120,12 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   .usr-pc button{background:none;border:0;color:#d3deeb;font-size:15px;text-decoration:underline;padding:6px 0}
   nav.abas{display:none}
   .corpo{padding:28px 32px 32px}
-  #painel-tarefas,#painel-perfil{display:none!important}
+  #painel-perfil{display:none!important}
+  #painel-tarefas{display:flex!important;max-width:1240px;width:100%;margin:24px auto 0}
+  body.sem-tarefas #painel-tarefas{display:none!important}
+  #lista-inicio{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .filtros-campos{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .filtros-campos select{width:auto;min-width:220px}
   #painel-inicio{display:grid!important;max-width:1240px;grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:auto 212px auto;gap:16px 32px;align-items:stretch}
   #painel-inicio>h2{grid-column:1 / -1;grid-row:1;font-size:20px;color:#1f3a5f}
   .grade{grid-column:1;grid-row:2;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;min-width:0}
@@ -177,16 +202,22 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
         <div class="nh"><span>Notificações <span class="exemplo">(exemplos)</span></span><span class="nb" id="badge-pc">3</span></div>
         <div id="lista-notif-pc"></div>
       </section>
-      <div class="cartao">
-        <div class="cartao-t">Minhas tarefas <span class="exemplo">(exemplos)</span></div>
+      <div class="cartao" id="cartao-inicio">
+        <div class="cartao-t">Minhas tarefas · por obra</div>
         <div class="filtro" data-filtro></div>
         <div id="lista-inicio"></div>
       </div>
     </div>
 
     <div class="painel" id="painel-tarefas" hidden>
-      <h2>Minhas tarefas <span class="exemplo">(exemplos)</span></h2>
+      <h2>Minhas tarefas</h2>
       <div class="filtro" data-filtro></div>
+      <div class="filtros-campos">
+        <select id="sel-obra" aria-label="Obra"></select>
+        <select id="sel-disc" aria-label="Disciplina"></select>
+        <select id="sel-sit" aria-label="Situação"></select>
+        <button type="button" class="limpar" id="limpar-filtros" hidden>Limpar filtros</button>
+      </div>
       <div class="cartao"><div id="lista-tarefas"></div></div>
     </div>
 
@@ -221,6 +252,15 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   </div>
 </div>
 
+<div id="folha-tarefa" hidden>
+  <div class="conteudo">
+    <h2 id="det-titulo"></h2>
+    <div id="det-campos"></div>
+    <p class="nota" style="margin-top:12px">Somente visualização. Para alterar, abra o Controle de Projetos.</p>
+    <button class="sair" id="fechar-tarefa" type="button" style="margin-top:12px">Fechar</button>
+  </div>
+</div>
+
 <div id="aviso" role="status" hidden></div>
 
 <script>
@@ -241,11 +281,11 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     geral: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>'
   };
 
-  var TAREFAS = [
-    { t: 'Tarefa de exemplo 1', s: '[Projeto] · prazo [data]', papel: 'resp' },
-    { t: 'Tarefa de exemplo 2', s: '[Projeto] · prazo [data]', papel: 'apoio' },
-    { t: 'Tarefa de exemplo 3', s: '[Projeto] · prazo [data]', papel: 'resp' }
-  ];
+  var TAREFAS = [];              // tarefas da pessoa (vêm do Controle; somente leitura)
+  var TAREFAS_OK = false;        // true = equipe da Engenharia (cliente não vê tarefas)
+  var CHAVE_TAREFAS = 'engelix_tarefas';
+  var fObra = '', fDisc = '', fSit = '';
+  var carregandoTarefas = false;
 
   var NOTIFS = [
     ['Tarefa atribuída a você', '[Projeto] · há 10 min'],
@@ -503,6 +543,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
         try { localStorage.setItem(CHAVE_EMP, s.id); } catch (e) {}
         montarTroca();
         montarGrade();
+        desenharTarefas();
       });
       box.appendChild(b);
     });
@@ -544,28 +585,189 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     });
   }
 
-  function desenharTarefas() {
-    ['lista-inicio', 'lista-tarefas'].forEach(function (id) {
-      var box = $(id);
-      box.innerHTML = '';
-      TAREFAS.filter(function (x) { return filtro === 'todas' || x.papel === filtro; })
-        .forEach(function (x) {
-          var d = document.createElement('div');
-          d.className = 'tarefa';
-          d.style.marginTop = '12px';
-          var t = document.createElement('div');
-          t.className = 't';
-          var a = document.createElement('span'); a.textContent = x.t;
-          var b = document.createElement('span'); b.textContent = x.s;
-          t.appendChild(a); t.appendChild(b);
-          var q = document.createElement('span');
-          q.className = 'etq ' + x.papel;
-          q.textContent = x.papel === 'resp' ? 'Responsável' : 'Apoio';
-          d.appendChild(t); d.appendChild(q);
-          box.appendChild(d);
-        });
+  function passa(x) {
+    if (filtro !== 'todas' && x.papel !== filtro) return false;
+    return (!fObra || x.obra === fObra) && (!fDisc || x.disciplina === fDisc) && (!fSit || x.situacao === fSit);
+  }
+
+  function usarCacheTarefas(nome) {
+    var c = lerJson(CHAVE_TAREFAS);
+    if (c && c.nome === nome && c.tarefas) { TAREFAS = c.tarefas; TAREFAS_OK = !!c.habilitado; }
+    else { TAREFAS = []; TAREFAS_OK = false; }
+  }
+
+  function carregarTarefas() {
+    if (!TOKEN || carregandoTarefas) return;
+    carregandoTarefas = true;
+    var nome = $('nome-perfil').textContent;
+    api({ acao: 'tarefas', token: TOKEN }).then(function (d) {
+      if (!TOKEN) return;
+      TAREFAS = d.tarefas || [];
+      TAREFAS_OK = !!d.habilitado;
+      gravarJson(CHAVE_TAREFAS, { nome: nome, habilitado: TAREFAS_OK, tarefas: TAREFAS });
+      desenharTarefas();
+    }).catch(function (e) {
+      if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); }
+      else if (!TAREFAS.length) { avisar(e && e.message ? e.message : 'Não foi possível carregar as tarefas.'); }
+    }).then(function () { carregandoTarefas = false; });
+  }
+
+  function abrirObra(o) {
+    fObra = o; fDisc = ''; fSit = '';
+    desenharTarefas();
+    if (window.matchMedia('(min-width:900px)').matches) {
+      $('painel-tarefas').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      irPara('tarefas');
+    }
+  }
+
+  /* Início: somente as obras (caixas) */
+  function desenharInicio() {
+    var box = $('lista-inicio');
+    box.innerHTML = '';
+    var obras = [], cont = {};
+    TAREFAS.forEach(function (x) {
+      if (filtro !== 'todas' && x.papel !== filtro) return;
+      if (!cont[x.obra]) { cont[x.obra] = { nao: 0, prontas: 0 }; obras.push(x.obra); }
+      cont[x.obra][x.grupo]++;
+    });
+    if (!obras.length) {
+      box.innerHTML = '<div class="vazio">Você não tem tarefas no momento.</div>';
+      return;
+    }
+    obras.forEach(function (o) {
+      var partes = [];
+      if (cont[o].nao) partes.push(cont[o].nao + (cont[o].nao === 1 ? ' não entregue' : ' não entregues'));
+      if (cont[o].prontas) partes.push(cont[o].prontas + (cont[o].prontas === 1 ? ' pronta' : ' prontas'));
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'obra-bt';
+      var info = document.createElement('div'); info.className = 'o';
+      var n = document.createElement('span'); n.textContent = o;
+      var r = document.createElement('span'); r.textContent = partes.join(' · ');
+      info.appendChild(n); info.appendChild(r);
+      var sp = document.createElement('span'); sp.className = 'seta'; sp.textContent = '›';
+      b.appendChild(info); b.appendChild(sp);
+      b.addEventListener('click', function () { abrirObra(o); });
+      box.appendChild(b);
     });
   }
+
+  /* Filtros por Obra, Disciplina e Situação */
+  function preencherSelect(id, campo, todos, valor) {
+    var sel = $(id), vals = [];
+    TAREFAS.forEach(function (x) {
+      if (filtro !== 'todas' && x.papel !== filtro) return;
+      if (x[campo] && vals.indexOf(x[campo]) < 0) vals.push(x[campo]);
+    });
+    if (valor && vals.indexOf(valor) < 0) vals.push(valor);
+    vals.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+    sel.innerHTML = '';
+    var o0 = document.createElement('option'); o0.value = ''; o0.textContent = todos; sel.appendChild(o0);
+    vals.forEach(function (v) {
+      var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+    });
+    sel.value = valor;
+  }
+
+  function desenharFiltrosCampos() {
+    preencherSelect('sel-obra', 'obra', 'Todas as obras', fObra);
+    preencherSelect('sel-disc', 'disciplina', 'Todas as disciplinas', fDisc);
+    preencherSelect('sel-sit', 'situacao', 'Todas as situações', fSit);
+    $('limpar-filtros').hidden = !(fObra || fDisc || fSit);
+  }
+
+  $('sel-obra').addEventListener('change', function () { fObra = this.value; desenharTarefas(); });
+  $('sel-disc').addEventListener('change', function () { fDisc = this.value; desenharTarefas(); });
+  $('sel-sit').addEventListener('change', function () { fSit = this.value; desenharTarefas(); });
+  $('limpar-filtros').addEventListener('click', function () { fObra = ''; fDisc = ''; fSit = ''; desenharTarefas(); });
+
+  /* Aba Tarefas: todas as tarefas, agrupadas por obra (A–Z), com Não entregues e Prontas */
+  function cartaoTarefa(x) {
+    var d = document.createElement('button');
+    d.type = 'button';
+    d.className = 'tarefa';
+    var t = document.createElement('div');
+    t.className = 't';
+    var a = document.createElement('span'); a.textContent = x.tarefa;
+    var b = document.createElement('span'); b.textContent = (x.disciplina ? x.disciplina + ' · ' : '') + x.situacao;
+    t.appendChild(a); t.appendChild(b);
+    var q = document.createElement('span');
+    q.className = 'etq ' + x.papel;
+    q.textContent = x.papel === 'resp' ? 'Responsável' : 'Apoio';
+    d.appendChild(t); d.appendChild(q);
+    d.addEventListener('click', function () { abrirDetalhe(x); });
+    return d;
+  }
+
+  function desenharLista() {
+    var box = $('lista-tarefas');
+    box.innerHTML = '';
+    var lista = TAREFAS.filter(passa);
+    if (!lista.length) {
+      box.innerHTML = '<div class="vazio">' + (TAREFAS.length ? 'Nenhuma tarefa com esses filtros.' : 'Você não tem tarefas no momento.') + '</div>';
+      return;
+    }
+    var obras = [];
+    lista.forEach(function (x) { if (obras.indexOf(x.obra) < 0) obras.push(x.obra); });
+    obras.forEach(function (o) {
+      var h = document.createElement('div');
+      h.className = 'obra-t';
+      h.textContent = o;
+      box.appendChild(h);
+      [['nao', 'Não entregues'], ['prontas', 'Prontas']].forEach(function (g) {
+        var itens = lista.filter(function (x) { return x.obra === o && x.grupo === g[0]; });
+        if (!itens.length) return;
+        var gt = document.createElement('div');
+        gt.className = 'grupo-tf';
+        gt.textContent = g[1] + ' (' + itens.length + ')';
+        box.appendChild(gt);
+        itens.forEach(function (x) { box.appendChild(cartaoTarefa(x)); });
+      });
+    });
+  }
+
+  /* Detalhe (somente visualização) */
+  var CAMPOS_DET = [['Obra', 'obra'], ['Disciplina', 'disciplina'], ['Serviço', 'servico'], ['Revisão atual', 'revisao'],
+    ['Responsável', 'responsavel'], ['Apoio', 'apoio'], ['Situação', 'situacao'], ['Dependência', 'dependencia'],
+    ['Início da produção', 'inicio'], ['Fim da produção', 'fim'], ['Dias de produção', 'dias'], ['Observação', 'obs']];
+
+  function abrirDetalhe(x) {
+    $('det-titulo').textContent = x.tarefa;
+    var box = $('det-campos');
+    box.innerHTML = '';
+    var linhas = [['Seu papel', x.papel === 'resp' ? 'Responsável' : 'Apoio']]
+      .concat(CAMPOS_DET.map(function (c) { return [c[0], x[c[1]]]; }));
+    linhas.forEach(function (l) {
+      var v = String(l[1] == null ? '' : l[1]).trim();
+      if (!v || v === '-') return;
+      var d = document.createElement('div'); d.className = 'det';
+      var a = document.createElement('small'); a.textContent = l[0];
+      var b = document.createElement('span'); b.textContent = v;
+      d.appendChild(a); d.appendChild(b);
+      box.appendChild(d);
+    });
+    $('folha-tarefa').hidden = false;
+  }
+
+  $('fechar-tarefa').addEventListener('click', function () { $('folha-tarefa').hidden = true; });
+  $('folha-tarefa').addEventListener('click', function (e) { if (e.target === this) this.hidden = true; });
+
+  function desenharTarefas() {
+    var ok = TAREFAS_OK;
+    document.querySelector('nav.abas button[data-aba="tarefas"]').hidden = !ok;
+    document.body.classList.toggle('sem-tarefas', !(ok && empresaSel === 'engenharia'));
+    $('cartao-inicio').hidden = !(ok && empresaSel === 'engenharia');
+    if (!ok && !$('painel-tarefas').hidden) irPara('inicio');
+    desenharInicio();
+    desenharFiltrosCampos();
+    desenharLista();
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && TOKEN && !$('tela-app').hidden) carregarTarefas();
+  });
 
   /* ---------- ABAS (CELULAR) ---------- */
   function irPara(aba) {
@@ -604,8 +806,10 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     montarTroca();
     montarGrade();
     montarFiltros();
+    usarCacheTarefas(nome);
     desenharTarefas();
     desenharNotifs();
+    carregarTarefas();
     if (!manterAba) irPara('inicio');
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
@@ -615,6 +819,8 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     TOKEN = '';
     apagar(CHAVE);
     apagar(CHAVE_CACHE);
+    apagar(CHAVE_TAREFAS);
+    TAREFAS = []; TAREFAS_OK = false; fObra = ''; fDisc = ''; fSit = '';
     mostrarLogin(msg);
   }
 
