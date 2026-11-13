@@ -32,6 +32,11 @@ h2{margin:0;font-size:18px;color:#222}
 .vazio{font-size:14px;color:#4f5d6b;text-align:center;padding:16px 0;grid-column:1 / -1}
 .nome{min-height:44px;border-radius:6px;border:1px solid #c4ccd6;background:#fff;color:#222;font-size:15px;text-align:left;padding:0 14px}
 .nome.sel{border:2px solid #1f3a5f;background:#e8edf3;color:#1f3a5f;font-weight:bold}
+.dica{margin:6px 0 0;font-size:12px;color:#1f3a5f;min-height:16px}
+.sep{display:flex;align-items:center;gap:10px;font-size:12px;color:#4f5d6b;margin-top:2px}
+.sep:before,.sep:after{content:'';flex:1;height:1px;background:#c4ccd6}
+.clientes{display:flex;gap:8px}
+.clientes .nome{flex:1;text-align:center;padding:0 8px;font-size:14px}
 .campo{display:flex;align-items:center;border:1px solid #c4ccd6;border-radius:6px;min-height:44px;padding:0 6px 0 14px;gap:8px}
 .campo input{flex:1;min-width:0;border:0;outline:0;font-size:16px;background:transparent;color:#222}
 .olho{width:44px;height:44px;border:0;background:transparent;display:flex;align-items:center;justify-content:center}
@@ -122,9 +127,16 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   <img class="logo-login" src="logo-branco.png" alt="ENGELIX">
   <form class="caixa" id="form-login" autocomplete="off">
     <h1>Portal ENGELIX</h1>
-    <div>
-      <div class="rotulo" style="margin-bottom:8px">Quem é você?</div>
-      <div class="nomes" id="nomes"><div class="nota">Carregando…</div></div>
+    <div id="bloco-usuario">
+      <label class="rotulo" for="usuario" style="display:block;margin-bottom:6px">Usuário</label>
+      <div class="campo">
+        <input id="usuario" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next">
+      </div>
+      <p class="dica" id="dica"></p>
+    </div>
+    <div id="bloco-cliente-sel" hidden>
+      <div class="rotulo">Entrando como cliente:</div>
+      <div style="font-size:16px;font-weight:bold;color:#1f3a5f;margin-top:4px" id="cliente-nome"></div>
     </div>
     <div id="bloco-senha">
       <label class="rotulo" for="senha" style="display:block;margin-bottom:6px">Senha</label>
@@ -137,6 +149,8 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     </div>
     <p class="erro" id="erro" hidden></p>
     <button class="entrar" type="submit" id="btn-entrar">Entrar</button>
+    <div class="sep" id="sep-cliente" hidden>Sou cliente</div>
+    <div class="clientes" id="clientes" hidden></div>
     <p class="nota">Você fica conectado neste aparelho até tocar em "Sair".</p>
   </form>
 </section>
@@ -245,8 +259,6 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 
   var FILTROS = [['todas', 'Todas'], ['resp', 'Responsável'], ['apoio', 'Apoio']];
   var filtro = 'todas';
-  var nomeSel = null;
-  var semSenha = {};
   var tempoAviso = null;
   var TOKEN = '';
   var SECOES = [];
@@ -290,89 +302,121 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   }
 
   /* ---------- LOGIN ---------- */
+  var listaNomes = [];     // equipe (quem digita o nome)
+  var listaClientes = [];  // clientes (botões)
+  var clienteSel = '';
+  var promessaNomes = null;
+
   function mostrarErroLogin(msg) {
     $('erro').textContent = msg;
     $('erro').hidden = false;
   }
 
-  function atualizarBlocoSenha() {
-    $('bloco-senha').hidden = !!(nomeSel && semSenha[nomeSel]);
+  function norm(t) {
+    return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
   }
 
-  function botaoNome(n, box) {
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'nome';
-    b.textContent = n;
-    b.addEventListener('click', function () {
-      nomeSel = n;
-      Array.prototype.forEach.call(document.querySelectorAll('#nomes .nome'), function (c) {
-        c.classList.toggle('sel', c.textContent === n);
-      });
-      $('erro').hidden = true;
-      atualizarBlocoSenha();
+  function acharNome(txt) {
+    var alvo = norm(txt);
+    if (!alvo) return '';
+    for (var i = 0; i < listaNomes.length; i++) if (norm(listaNomes[i]) === alvo) return listaNomes[i];
+    return '';
+  }
+
+  function atualizarDica() {
+    var n = acharNome($('usuario').value);
+    $('dica').textContent = n ? '✓ ' + n : '';
+  }
+
+  function corrigirCampo() {
+    var n = acharNome($('usuario').value);
+    if (n) $('usuario').value = n;
+    atualizarDica();
+  }
+
+  function escolherCliente(n) {
+    clienteSel = clienteSel === n ? '' : n;
+    $('erro').hidden = true;
+    $('bloco-usuario').hidden = !!clienteSel;
+    $('bloco-cliente-sel').hidden = !clienteSel;
+    $('cliente-nome').textContent = clienteSel;
+    Array.prototype.forEach.call(document.querySelectorAll('#clientes .nome'), function (c) {
+      c.classList.toggle('sel', c.textContent === clienteSel);
     });
-    box.appendChild(b);
+    $('senha').value = '';
+    $(clienteSel ? 'senha' : 'usuario').focus();
   }
 
   function montarNomes(dados) {
-    var box = $('nomes');
-    box.innerHTML = '';
-    semSenha = dados.semSenha || {};
-    var grupos = dados.grupos || [];
-    grupos.forEach(function (g) {
-      if (grupos.length > 1) {
-        var t = document.createElement('div');
-        t.className = 'grupo-t';
-        t.textContent = g.nome;
-        box.appendChild(t);
-      }
-      g.nomes.forEach(function (n) { botaoNome(n, box); });
+    var vistos = {}, clientes = dados.clientes || [];
+    listaNomes = [];
+    (dados.grupos || []).forEach(function (g) {
+      g.nomes.forEach(function (n) {
+        if (clientes.indexOf(n) < 0 && !vistos[n]) { vistos[n] = true; listaNomes.push(n); }
+      });
     });
-    if (!grupos.length) box.innerHTML = '<div class="nota">Nenhum usuário disponível.</div>';
-  }
-
-  function carregarNomes() {
-    $('nomes').innerHTML = '<div class="nota">Carregando…</div>';
-    api({ acao: 'nomes' }).then(montarNomes).catch(function (e) {
-      $('nomes').innerHTML = '';
+    listaClientes = clientes;
+    var box = $('clientes');
+    box.innerHTML = '';
+    clientes.forEach(function (n) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'nome';
-      b.textContent = 'Não foi possível carregar. Toque para tentar de novo.';
-      b.addEventListener('click', carregarNomes);
-      $('nomes').appendChild(b);
-      mostrarErroLogin(e.message);
+      b.textContent = n;
+      b.addEventListener('click', function () { escolherCliente(n); });
+      box.appendChild(b);
     });
+    box.hidden = !clientes.length;
+    $('sep-cliente').hidden = !clientes.length;
+    corrigirCampo();
+  }
+
+  function carregarNomes() {
+    promessaNomes = api({ acao: 'nomes' }).then(montarNomes).catch(function (e) {
+      promessaNomes = null;
+      throw e;
+    });
+    promessaNomes.catch(function () {});
+    return promessaNomes;
   }
 
   function mostrarLogin(msg) {
-    nomeSel = null;
+    clienteSel = '';
+    $('usuario').value = '';
+    $('dica').textContent = '';
+    $('bloco-usuario').hidden = false;
+    $('bloco-cliente-sel').hidden = true;
     $('senha').value = '';
     $('senha').type = 'password';
     $('erro').hidden = true;
     if (msg) mostrarErroLogin(msg);
-    $('bloco-senha').hidden = false;
     $('tela-app').hidden = true;
     $('tela-login').hidden = false;
     carregarNomes();
   }
 
+  $('usuario').addEventListener('input', atualizarDica);
+  $('usuario').addEventListener('blur', corrigirCampo);
+
   $('form-login').addEventListener('submit', function (e) {
     e.preventDefault();
-    if (!nomeSel) { mostrarErroLogin('Escolha quem você é.'); return; }
     var btn = $('btn-entrar');
+    if (btn.disabled) return;
+    $('erro').hidden = true;
     btn.disabled = true;
     btn.textContent = 'Entrando…';
-    $('erro').hidden = true;
-    api({ acao: 'entrar', nome: nomeSel, senha: $('senha').value, aparelho: aparelho() })
-      .then(function (d) {
-        TOKEN = d.token;
-        gravarJson(CHAVE, { token: d.token, nome: d.usuario.nome });
-        gravarJson(CHAVE_CACHE, { usuario: d.usuario, secoes: d.secoes });
-        mostrarApp(d, false);
-      })
-      .catch(function (err) { mostrarErroLogin(err.message); })
+    var pronto = promessaNomes || carregarNomes();
+    pronto.then(function () {
+      var nome = clienteSel || acharNome($('usuario').value);
+      if (!nome) throw new Error($('usuario').value.trim() ? 'Usuário não encontrado.' : 'Digite seu usuário.');
+      if (!clienteSel) $('usuario').value = nome;
+      return api({ acao: 'entrar', nome: nome, senha: $('senha').value, aparelho: aparelho() });
+    }).then(function (d) {
+      TOKEN = d.token;
+      gravarJson(CHAVE, { token: d.token, nome: d.usuario.nome });
+      gravarJson(CHAVE_CACHE, { usuario: d.usuario, secoes: d.secoes });
+      mostrarApp(d, false);
+    }).catch(function (err) { mostrarErroLogin(err.message); })
       .then(function () { btn.disabled = false; btn.textContent = 'Entrar'; });
   });
 
