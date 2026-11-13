@@ -28,6 +28,8 @@ h2{margin:0;font-size:18px;color:#222}
 .caixa h1{margin:0;font-size:20px;color:#1f3a5f;text-align:center}
 .rotulo{font-size:13px;color:#4f5d6b}
 .nomes{display:flex;flex-direction:column;gap:8px}
+.grupo-t{font-size:12px;font-weight:bold;color:#1f3a5f;margin:6px 0 0}
+.vazio{font-size:14px;color:#4f5d6b;text-align:center;padding:16px 0;grid-column:1 / -1}
 .nome{min-height:44px;border-radius:6px;border:1px solid #c4ccd6;background:#fff;color:#222;font-size:15px;text-align:left;padding:0 14px}
 .nome.sel{border:2px solid #1f3a5f;background:#e8edf3;color:#1f3a5f;font-weight:bold}
 .campo{display:flex;align-items:center;border:1px solid #c4ccd6;border-radius:6px;min-height:44px;padding:0 6px 0 14px;gap:8px}
@@ -36,11 +38,14 @@ h2{margin:0;font-size:18px;color:#222}
 .entrar{min-height:48px;border-radius:6px;border:0;background:#1f3a5f;color:#fff;font-size:16px;font-weight:bold}
 .nota{margin:0;font-size:12px;color:#4f5d6b;text-align:center;line-height:1.4}
 .erro{margin:0;font-size:13px;color:#b03a2e;text-align:center}
-.teste{background:#fdf0dc;color:#6b4700;font-size:12px;border-radius:6px;padding:8px 10px;text-align:center;line-height:1.4}
+.exemplo{font-size:12px;font-weight:normal;color:#6b4700}
 
 /* APP (CELULAR) */
 #tela-app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
-.topo{background:#1f3a5f;padding:calc(16px + env(safe-area-inset-top)) 20px 18px;border-radius:0 0 20px 20px;display:flex;align-items:center;gap:12px}
+.topo{background:#1f3a5f;padding:calc(16px + env(safe-area-inset-top)) 20px 18px;border-radius:0 0 20px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.troca{order:10;flex:0 0 100%;display:flex;background:rgba(255,255,255,.14);border-radius:12px;padding:4px;gap:4px;margin-top:4px}
+.troca button{flex:1;min-height:40px;border-radius:9px;border:0;font-size:14px;font-weight:bold;background:transparent;color:#fff}
+.troca button.on{background:#fff;color:#1f3a5f}
 .topo .folha{width:44px;height:36px;object-fit:contain;display:block}
 .saud{flex:1;min-width:0;display:flex;flex-direction:column}
 .saud small{font-size:13px;color:#d3deeb}
@@ -84,7 +89,10 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 @media (min-width:900px){
   .cel{display:none!important}
   .titulo-pc{display:inline}
-  .topo{border-radius:0;min-height:72px;padding:0 32px;gap:24px;justify-content:space-between}
+  .topo{border-radius:0;min-height:72px;padding:0 32px;gap:24px;flex-wrap:nowrap;justify-content:space-between}
+  .logo-pc{order:1}
+  .troca{order:2;flex:0 0 320px;margin-top:0}
+  .usr-pc{order:3}
   .logo-pc{display:block;height:42px;width:auto}
   .usr-pc{display:flex;align-items:center;gap:16px;color:#fff;font-size:15px}
   .usr-pc button{background:none;border:0;color:#d3deeb;font-size:15px;text-decoration:underline;padding:6px 0}
@@ -116,9 +124,9 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     <h1>Portal ENGELIX</h1>
     <div>
       <div class="rotulo" style="margin-bottom:8px">Quem é você?</div>
-      <div class="nomes" id="nomes"></div>
+      <div class="nomes" id="nomes"><div class="nota">Carregando…</div></div>
     </div>
-    <div>
+    <div id="bloco-senha">
       <label class="rotulo" for="senha" style="display:block;margin-bottom:6px">Senha</label>
       <div class="campo">
         <input id="senha" type="password" autocomplete="current-password">
@@ -128,9 +136,8 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
       </div>
     </div>
     <p class="erro" id="erro" hidden></p>
-    <button class="entrar" type="submit">Entrar</button>
+    <button class="entrar" type="submit" id="btn-entrar">Entrar</button>
     <p class="nota">Você fica conectado neste aparelho até tocar em "Sair".</p>
-    <div class="teste">Versão de teste: nomes e dados de exemplo. Qualquer senha entra.</div>
   </form>
 </section>
 
@@ -149,25 +156,26 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
       <button type="button" id="alterar-senha">alterar senha</button>
       <button type="button" id="sair-pc">sair</button>
     </div>
+    <div class="troca" id="troca" hidden></div>
   </header>
 
   <main class="corpo" id="corpo">
     <div class="painel" id="painel-inicio">
-      <h2><span class="cel">Sistemas</span><span class="pc titulo-pc">ENGELIX Engenharia</span></h2>
+      <h2><span class="cel">Sistemas</span><span class="pc titulo-pc" id="titulo-pc">ENGELIX</span></h2>
       <div class="grade" id="grade"></div>
       <section class="caixa-notif pc">
-        <div class="nh"><span>Notificações</span><span class="nb" id="badge-pc">3</span></div>
+        <div class="nh"><span>Notificações <span class="exemplo">(exemplos)</span></span><span class="nb" id="badge-pc">3</span></div>
         <div id="lista-notif-pc"></div>
       </section>
       <div class="cartao">
-        <div class="cartao-t">Minhas tarefas</div>
+        <div class="cartao-t">Minhas tarefas <span class="exemplo">(exemplos)</span></div>
         <div class="filtro" data-filtro></div>
         <div id="lista-inicio"></div>
       </div>
     </div>
 
     <div class="painel" id="painel-tarefas" hidden>
-      <h2>Minhas tarefas</h2>
+      <h2>Minhas tarefas <span class="exemplo">(exemplos)</span></h2>
       <div class="filtro" data-filtro></div>
       <div class="cartao"><div id="lista-tarefas"></div></div>
     </div>
@@ -197,7 +205,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 
 <div id="folha-notif" hidden>
   <div class="conteudo">
-    <h2>Notificações</h2>
+    <h2>Notificações <span class="exemplo">(exemplos)</span></h2>
     <div id="lista-notif-cel"></div>
     <button class="sair" id="fechar-notif" type="button" style="margin-top:12px">Fechar</button>
   </div>
@@ -209,22 +217,19 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 (function () {
   'use strict';
 
-  var CHAVE = 'engelix_sessao';
-  var NOMES = ['Usuário 1', 'Usuário 2', 'Usuário 3'];
+  var API = 'https://script.google.com/macros/s/AKfycbxF-7TOyL8YyNmawN-MW3crYqy5YALc3vVWW8mGkWTSOPGgigx4rhgdCM8IvOc_RqMT/exec';
+  var CHAVE = 'engelix_sessao';      // { token, nome }
+  var CHAVE_CACHE = 'engelix_cache'; // { usuario, secoes } (último que o servidor mandou)
+  var CHAVE_EMP = 'engelix_empresa';
 
   var ICONES = {
     controle: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m9 14 2 2 4-4"/>',
-    memo: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/>',
-    carga: '<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>',
-    email: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>'
+    memoriais: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/>',
+    cargatermica: '<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>',
+    email: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+    diario: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    geral: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>'
   };
-
-  var SISTEMAS = [
-    { nome: 'Controle de Projetos', icone: 'controle', desc: 'Tarefas, revisões e resumo das obras' },
-    { nome: 'Memoriais', icone: 'memo', desc: 'Memoriais descritivos e pareceres' },
-    { nome: 'Carga Térmica', icone: 'carga', desc: 'Cálculo de carga térmica e ar-condicionado' },
-    { nome: 'E-mail', icone: 'email', desc: 'Webmail UOL (login próprio do UOL)' }
-  ];
 
   var TAREFAS = [
     { t: 'Tarefa de exemplo 1', s: '[Projeto] · prazo [data]', papel: 'resp' },
@@ -241,18 +246,22 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   var FILTROS = [['todas', 'Todas'], ['resp', 'Responsável'], ['apoio', 'Apoio']];
   var filtro = 'todas';
   var nomeSel = null;
+  var semSenha = {};
   var tempoAviso = null;
+  var TOKEN = '';
+  var SECOES = [];
+  var empresaSel = '';
 
   function $(id) { return document.getElementById(id); }
 
-  function lerSessao() {
-    try { return JSON.parse(localStorage.getItem(CHAVE)); } catch (e) { return null; }
+  function lerJson(chave) {
+    try { return JSON.parse(localStorage.getItem(chave)); } catch (e) { return null; }
   }
-  function gravarSessao(nome) {
-    try { localStorage.setItem(CHAVE, JSON.stringify({ nome: nome })); } catch (e) {}
+  function gravarJson(chave, valor) {
+    try { localStorage.setItem(chave, JSON.stringify(valor)); } catch (e) {}
   }
-  function limparSessao() {
-    try { localStorage.removeItem(CHAVE); } catch (e) {}
+  function apagar(chave) {
+    try { localStorage.removeItem(chave); } catch (e) {}
   }
 
   function avisar(msg) {
@@ -260,46 +269,111 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     el.textContent = msg;
     el.hidden = false;
     clearTimeout(tempoAviso);
-    tempoAviso = setTimeout(function () { el.hidden = true; }, 2500);
+    tempoAviso = setTimeout(function () { el.hidden = true; }, 2800);
+  }
+
+  /* ---------- COMUNICAÇÃO COM O SERVIDOR (Apps Script) ---------- */
+  function api(corpo) {
+    return fetch(API, { method: 'POST', body: JSON.stringify(corpo) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) throw new Error(j.erro || 'Erro inesperado.');
+        return j.dados;
+      }, function () {
+        throw new Error('Sem conexão com o servidor. Tente de novo.');
+      });
+  }
+
+  function aparelho() {
+    var u = navigator.userAgent || '';
+    return (/iPhone|iPad/.test(u) ? 'iPhone' : /Android/.test(u) ? 'Android' : 'Computador') + ' · app';
   }
 
   /* ---------- LOGIN ---------- */
-  function montarNomes() {
+  function mostrarErroLogin(msg) {
+    $('erro').textContent = msg;
+    $('erro').hidden = false;
+  }
+
+  function atualizarBlocoSenha() {
+    $('bloco-senha').hidden = !!(nomeSel && semSenha[nomeSel]);
+  }
+
+  function botaoNome(n, box) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'nome';
+    b.textContent = n;
+    b.addEventListener('click', function () {
+      nomeSel = n;
+      Array.prototype.forEach.call(document.querySelectorAll('#nomes .nome'), function (c) {
+        c.classList.toggle('sel', c.textContent === n);
+      });
+      $('erro').hidden = true;
+      atualizarBlocoSenha();
+    });
+    box.appendChild(b);
+  }
+
+  function montarNomes(dados) {
     var box = $('nomes');
     box.innerHTML = '';
-    NOMES.forEach(function (n) {
+    semSenha = dados.semSenha || {};
+    var grupos = dados.grupos || [];
+    grupos.forEach(function (g) {
+      if (grupos.length > 1) {
+        var t = document.createElement('div');
+        t.className = 'grupo-t';
+        t.textContent = g.nome;
+        box.appendChild(t);
+      }
+      g.nomes.forEach(function (n) { botaoNome(n, box); });
+    });
+    if (!grupos.length) box.innerHTML = '<div class="nota">Nenhum usuário disponível.</div>';
+  }
+
+  function carregarNomes() {
+    $('nomes').innerHTML = '<div class="nota">Carregando…</div>';
+    api({ acao: 'nomes' }).then(montarNomes).catch(function (e) {
+      $('nomes').innerHTML = '';
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'nome';
-      b.textContent = n;
-      b.addEventListener('click', function () {
-        nomeSel = n;
-        Array.prototype.forEach.call(box.children, function (c) { c.classList.remove('sel'); });
-        b.classList.add('sel');
-        $('erro').hidden = true;
-      });
-      box.appendChild(b);
+      b.textContent = 'Não foi possível carregar. Toque para tentar de novo.';
+      b.addEventListener('click', carregarNomes);
+      $('nomes').appendChild(b);
+      mostrarErroLogin(e.message);
     });
   }
 
-  function mostrarLogin() {
+  function mostrarLogin(msg) {
     nomeSel = null;
     $('senha').value = '';
+    $('senha').type = 'password';
     $('erro').hidden = true;
-    montarNomes();
+    if (msg) mostrarErroLogin(msg);
+    $('bloco-senha').hidden = false;
     $('tela-app').hidden = true;
     $('tela-login').hidden = false;
+    carregarNomes();
   }
 
   $('form-login').addEventListener('submit', function (e) {
     e.preventDefault();
-    if (!nomeSel) {
-      $('erro').textContent = 'Escolha quem você é.';
-      $('erro').hidden = false;
-      return;
-    }
-    gravarSessao(nomeSel);
-    mostrarApp(nomeSel);
+    if (!nomeSel) { mostrarErroLogin('Escolha quem você é.'); return; }
+    var btn = $('btn-entrar');
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    $('erro').hidden = true;
+    api({ acao: 'entrar', nome: nomeSel, senha: $('senha').value, aparelho: aparelho() })
+      .then(function (d) {
+        TOKEN = d.token;
+        gravarJson(CHAVE, { token: d.token, nome: d.usuario.nome });
+        gravarJson(CHAVE_CACHE, { usuario: d.usuario, secoes: d.secoes });
+        mostrarApp(d, false);
+      })
+      .catch(function (err) { mostrarErroLogin(err.message); })
+      .then(function () { btn.disabled = false; btn.textContent = 'Entrar'; });
   });
 
   $('olho').addEventListener('click', function () {
@@ -335,30 +409,72 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     return c;
   }
 
+  function secaoAtual() {
+    return SECOES.filter(function (s) { return s.id === empresaSel; })[0] || SECOES[0] || null;
+  }
+
+  function abrirSistema(s) {
+    if (s.emConstrucao) { avisar(s.nome + ' ainda está em construção.'); return; }
+    if (s.externo) { window.open(s.link, '_blank'); return; }
+    var w = window.open('', '_blank');
+    avisar('Abrindo ' + s.nome + '…');
+    api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
+      if (w) { w.location.href = d.url; } else { location.href = d.url; }
+    }).catch(function (e) {
+      if (w) w.close();
+      tratarErro(e);
+    });
+  }
+
   function montarGrade() {
     var g = $('grade');
-    var col = colunasCel(SISTEMAS.length);
-    var colPc = colunasPc(SISTEMAS.length);
+    var sec = secaoAtual();
+    var lista = sec ? sec.sistemas : [];
     g.innerHTML = '';
-    SISTEMAS.forEach(function (s, i) {
+    $('titulo-pc').textContent = sec ? sec.nome : 'ENGELIX';
+    if (!lista.length) {
+      g.innerHTML = '<div class="vazio">Nenhum sistema disponível para você.</div>';
+      return;
+    }
+    var col = colunasCel(lista.length);
+    var colPc = colunasPc(lista.length);
+    lista.forEach(function (s, i) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'sis';
       b.style.setProperty('--c', col[i]);
       b.style.setProperty('--cp', colPc[i]);
-      b.innerHTML = '<span class="ic"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1f3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONES[s.icone] + '</svg></span>';
+      b.innerHTML = '<span class="ic"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1f3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONES[s.icone] || ICONES.geral) + '</svg></span>';
       var rot = document.createElement('span');
       rot.className = 'nm';
       rot.textContent = s.nome;
       b.appendChild(rot);
       var d = document.createElement('span');
       d.className = 'desc';
-      d.textContent = s.desc;
+      d.textContent = s.descricao || '';
       b.appendChild(d);
-      b.addEventListener('click', function () {
-        avisar('Em breve: "' + s.nome + '" vai abrir aqui dentro do app.');
-      });
+      b.addEventListener('click', function () { abrirSistema(s); });
       g.appendChild(b);
+    });
+  }
+
+  function montarTroca() {
+    var box = $('troca');
+    box.innerHTML = '';
+    box.hidden = SECOES.length < 2;
+    if (SECOES.length < 2) return;
+    SECOES.forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = s.nome.replace(/^ENGELIX\s+/i, '');
+      b.className = s.id === empresaSel ? 'on' : '';
+      b.addEventListener('click', function () {
+        empresaSel = s.id;
+        try { localStorage.setItem(CHAVE_EMP, s.id); } catch (e) {}
+        montarTroca();
+        montarGrade();
+      });
+      box.appendChild(b);
     });
   }
 
@@ -442,25 +558,47 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
     return h < 12 ? 'Bom dia,' : (h < 18 ? 'Boa tarde,' : 'Boa noite,');
   }
 
-  function mostrarApp(nome) {
+  function mostrarApp(dados, manterAba) {
+    var nome = dados.usuario.nome;
+    SECOES = dados.secoes || [];
+    var guardada = '';
+    try { guardada = localStorage.getItem(CHAVE_EMP) || ''; } catch (e) {}
+    if (!SECOES.some(function (s) { return s.id === empresaSel; })) {
+      empresaSel = SECOES.some(function (s) { return s.id === guardada; }) ? guardada : (SECOES[0] ? SECOES[0].id : '');
+    }
     $('saudacao').textContent = saudacao();
     $('nome-topo').textContent = nome;
     $('nome-pc').textContent = nome;
     $('nome-perfil').textContent = nome;
     $('avatar').textContent = nome.charAt(0).toUpperCase();
+    montarTroca();
     montarGrade();
     montarFiltros();
     desenharTarefas();
     desenharNotifs();
-    irPara('inicio');
+    if (!manterAba) irPara('inicio');
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
   }
 
-  function sair() {
-    limparSessao();
-    mostrarLogin();
+  function sairLocal(msg) {
+    TOKEN = '';
+    apagar(CHAVE);
+    apagar(CHAVE_CACHE);
+    mostrarLogin(msg);
   }
+
+  function sair() {
+    var t = TOKEN;
+    sairLocal();
+    if (t) api({ acao: 'sair', token: t }).catch(function () {});
+  }
+
+  function tratarErro(e) {
+    if (e && e.message === 'SESSAO_INVALIDA') { sairLocal('Sua sessão terminou. Entre novamente.'); return; }
+    avisar(e && e.message ? e.message : 'Erro inesperado.');
+  }
+
   $('sair').addEventListener('click', sair);
   $('sair-pc').addEventListener('click', sair);
   $('alterar-senha').addEventListener('click', function () {
@@ -474,8 +612,21 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
   });
 
   /* ---------- INICIO ---------- */
-  var sessao = lerSessao();
-  if (sessao && sessao.nome) { mostrarApp(sessao.nome); } else { mostrarLogin(); }
+  var sessao = lerJson(CHAVE);
+  if (sessao && sessao.token) {
+    TOKEN = sessao.token;
+    var cache = lerJson(CHAVE_CACHE);
+    if (cache && cache.usuario) mostrarApp(cache, false);   // abre na hora com o que já sabe
+    api({ acao: 'sessao', token: TOKEN }).then(function (d) {
+      gravarJson(CHAVE_CACHE, d);
+      mostrarApp(d, true);
+    }).catch(function (e) {
+      if (e && e.message === 'SESSAO_INVALIDA') { sairLocal('Sua sessão terminou. Entre novamente.'); }
+      else if (!(cache && cache.usuario)) { mostrarLogin(e.message); }
+    });
+  } else {
+    mostrarLogin();
+  }
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
