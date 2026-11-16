@@ -244,6 +244,14 @@ nav.abas button[hidden]{display:none!important}
   #nome-pc,#alterar-senha,#ir-email{display:none!important}
   #ir-inicio{text-decoration:none;display:flex;align-items:center}
 }
+.ico-btn{width:40px;height:40px;flex:0 0 auto;border-radius:10px;border:1px solid #c4ccd6;background:#fff;color:#1f3a5f;display:flex;align-items:center;justify-content:center;padding:0}
+.ico-btn.ativo{background:#1f3a5f;color:#fff;border-color:#1f3a5f}
+#res-alt{display:none!important}
+.pf-nome{display:flex;align-items:center;justify-content:center;gap:8px}
+.pf-nome h2{margin:0}
+.pf-nome .ico-btn{width:34px;height:34px}
+.pf-acoes{display:flex;gap:8px;justify-content:center;width:100%}
+.painel.perfil .sair{width:auto;min-height:38px;font-size:14px;padding:0 20px}
 </style>
 </head>
 <body>
@@ -318,9 +326,9 @@ nav.abas button[hidden]{display:none!important}
     </div>
 
     <div class="painel" id="painel-tarefas" hidden>
-      <h2>Minhas tarefas</h2>
+      <div class="res-bar"><h2>Minhas tarefas</h2><button type="button" class="ico-btn" id="btn-filtros" aria-label="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.5V19l4 2v-8.5z"/></svg></button></div>
       <div class="filtro" data-filtro></div>
-      <div class="filtros-campos">
+      <div class="filtros-campos" hidden>
         <select id="sel-obra" aria-label="Obra"></select>
         <select id="sel-disc" aria-label="Disciplina"></select>
         <select id="sel-sit" aria-label="Situação"></select>
@@ -331,21 +339,18 @@ nav.abas button[hidden]{display:none!important}
 
     <div class="painel perfil" id="painel-perfil" hidden>
       <div class="avatar" id="avatar"></div>
-      <h2 id="nome-perfil"></h2>
+      <div class="pf-nome"><h2 id="nome-perfil"></h2><button type="button" class="ico-btn" id="pf-lapis" aria-label="Editar dados"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>
       <form class="pf-form" id="pf-form" autocomplete="off">
         <label>Usuário (login)<input id="pf-user" readonly></label>
         <label>Nome completo<input id="pf-nc" maxlength="80" readonly></label>
-        <label>Título (ex.: arquiteto)<input id="pf-ti" maxlength="40" readonly></label>
-        <label>Cargo (ex.: gerente)<input id="pf-fn" maxlength="60" readonly></label>
+        <label>Título<input id="pf-ti" maxlength="40" readonly></label>
+        <label>Cargo<input id="pf-fn" maxlength="60" readonly></label>
         <label>Telefone<input id="pf-tel" type="tel" inputmode="tel" maxlength="15" placeholder="(XX) XXXXX-XXXX" readonly></label>
         <label>E-mail (usado para recuperar a senha)<input id="pf-email" type="email" maxlength="100" readonly></label>
         <label>Perfil no app<input id="pf-perfis" readonly></label>
-        <button class="sair" id="pf-editar" type="button" style="background:#1f3a5f;color:#fff">Editar dados</button>
-        <button class="sair" id="pf-salvar" type="submit" style="background:#1f3a5f;color:#fff" hidden>Salvar dados</button>
-        <button class="sair" id="pf-cancelar" type="button" hidden>Cancelar</button>
+        <div class="pf-acoes"><button class="sair" id="pf-salvar" type="submit" style="background:#1f3a5f;color:#fff" hidden>Salvar</button><button class="sair" id="pf-cancelar" type="button" hidden>Cancelar</button></div>
       </form>
-      <button class="sair" id="alterar-senha-cel" type="button" style="background:#fff;color:#1f3a5f;border:1px solid #1f3a5f;margin-bottom:10px">Alterar senha</button>
-      <button class="sair" id="sair" type="button">Sair</button>
+      <div class="pf-acoes"><button class="sair" id="alterar-senha-cel" type="button" style="background:#fff;color:#1f3a5f;border:1px solid #1f3a5f">Alterar senha</button><button class="sair" id="sair" type="button">Sair</button></div>
     </div>
       <div class="painel" id="painel-apps" hidden>
       <h2>Aplicativos</h2>
@@ -949,6 +954,7 @@ nav.abas button[hidden]{display:none!important}
     preencherSelect('sel-disc', 'disciplina', 'Todas as disciplinas', fDisc);
     preencherSelect('sel-sit', 'situacao', 'Todas as situações', fSit);
     $('limpar-filtros').hidden = !(fObra || fDisc || fSit);
+    $('btn-filtros').classList.toggle('ativo', !!(fObra || fDisc || fSit));
   }
 
   $('sel-obra').addEventListener('change', function () { fObra = this.value; desenharTarefas(); });
@@ -1291,20 +1297,19 @@ nav.abas button[hidden]{display:none!important}
   });
 
   function abrirEmail() {
-    var ua = navigator.userAgent || '', s = sistemaPorId('email');
-    if (/android/i.test(ua)) { location.href = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=br.com.uol.mail.uolhost;end'; return; }
-    if (/iphone|ipad|ipod/i.test(ua)) { window.open('https://apps.apple.com/br/app/uol-mail-pro/id1372865834', '_blank'); return; }
+    var s = sistemaPorId('email');
     if (s && s.link) window.open(s.link, '_blank');
   }
   $('b-email').addEventListener('click', abrirEmail);
   $('ir-email').addEventListener('click', abrirEmail);
 
   /* PERFIL */
+  $('btn-filtros').addEventListener('click', function () { var c = document.querySelector('#painel-tarefas .filtros-campos'); c.hidden = !c.hidden; });
   var EDITANDO = false;
   function modoEdicao(on) {
     EDITANDO = on;
     ['pf-nc', 'pf-ti', 'pf-fn', 'pf-tel', 'pf-email'].forEach(function (id) { $(id).readOnly = !on; });
-    $('pf-editar').hidden = on; $('pf-salvar').hidden = !on; $('pf-cancelar').hidden = !on;
+    $('pf-lapis').hidden = on; $('pf-salvar').hidden = !on; $('pf-cancelar').hidden = !on;
     if (!on) desenharPerfil();
   }
   function mascaraTel(v) {
@@ -1314,7 +1319,7 @@ nav.abas button[hidden]{display:none!important}
     if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
     return '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length > 10 ? 7 : 6) + '-' + d.slice(d.length > 10 ? 7 : 6);
   }
-  $('pf-editar').addEventListener('click', function () { modoEdicao(true); $('pf-nc').focus(); });
+  $('pf-lapis').addEventListener('click', function () { modoEdicao(true); $('pf-nc').focus(); });
   $('pf-cancelar').addEventListener('click', function () { modoEdicao(false); });
   $('pf-tel').addEventListener('input', function () { this.value = mascaraTel(this.value); });
   function gravarPerfil() { gravarJson(CHAVE_PERFIL, { nome: $('nome-perfil').textContent, dados: PERFIL }); }
