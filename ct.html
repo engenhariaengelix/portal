@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENGELIX Carga Térmica</title>
+<style>
+* { box-sizing: border-box; }
+:root { --az:#1f3a5f; --az2:#2d5286; --bd:#c4ccd6; --mut:#6c7a89; --er:#b03a2e; --al:#b26a00; }
+body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f4f5f7; color: #222; font-size: 14px; }
+[hidden] { display: none !important; }
+
+/* ===== Padrão ENGELIX (igual ao Controle de Projetos) ===== */
+header { background: #1f3a5f; color: #fff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+header h1 { font-size: 16px; margin: 0; }
+header .esq { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+header .usuario { font-size: 13px; }
+header .usuario a { color: #cfe0f5; text-decoration: underline; cursor: pointer; margin-left: 10px; }
+.btn-nav { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.45); border-radius: 4px; cursor: pointer; padding: 5px 10px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.btn-nav:hover { background: rgba(255,255,255,.25); }
+.abas { display: flex; background: #dde3ea; border-bottom: 1px solid #c4ccd6; }
+.abas button { flex: none; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #444; border-bottom: 3px solid transparent; }
+.abas button.ativa { border-bottom-color: #1f3a5f; color: #1f3a5f; font-weight: bold; }
+.conteudo { padding: 12px; max-width: 1320px; margin: 0 auto; }
+button.acao { background: #1f3a5f; color: #fff; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+button.acao:hover { background: var(--az2); }
+button.acao.secundaria { background: #6c7a89; }
+button.acao.perigo { background: #b03a2e; }
+button.acao.sm { padding: 4px 9px; font-size: 12px; }
+button.ic { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; border: 0; border-radius: 4px; background: var(--az); color: #fff; cursor: pointer; }
+button.ic:hover { filter: brightness(1.2); }
+button.ic.secundaria { background: #6c7a89; }
+button.ic.perigo { background: #b03a2e; }
+#tela-login { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #1f3a5f; }
+.caixa-login { background: #fff; border-radius: 8px; padding: 24px; width: 92%; max-width: 360px; }
+.caixa-login h1 { font-size: 18px; margin-top: 0; text-align: center; color: #1f3a5f; }
+.lista-nomes { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.lista-nomes button { padding: 10px; border: 1px solid #c4ccd6; background: #f4f5f7; border-radius: 4px; cursor: pointer; font-size: 14px; text-align: left; }
+.lista-nomes button:hover { background: #e4e9f0; }
+.caixa-login input { width: 100%; padding: 8px; border: 1px solid #c4ccd6; border-radius: 4px; font-size: 14px; margin-top: 8px; }
+.caixa-login .rodape-login { display: flex; justify-content: space-between; margin-top: 14px; }
+.campo-senha-wrap { position: relative; margin-top: 8px; }
+.campo-senha-wrap input { margin-top: 0; padding-right: 42px; }
+.btn-ver-senha { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 6px; color: #6c7a89; line-height: 0; }
+.btn-ver-senha:hover { color: #1f3a5f; }
+.carregando { padding: 30px; text-align: center; color: #888; }
+.logo-login { width: 220px; max-width: 70%; margin-bottom: 18px; }
+.logo-topo { height: 34px; display: block; }
+.erro { color: var(--er); font-size: 13px; min-height: 18px; margin-top: 8px; }
+@media (max-width: 700px) { .conteudo { padding: 8px; } .abas { overflow-x: auto; } .abas button { padding: 10px 12px; white-space: nowrap; } header { padding: 8px 10px; } .logo-topo { height: 28px; } }
+
+/* ===== App ===== */
+h2 { color: var(--az); margin: 0 0 4px; font-size: 20px; } h3 { color: var(--az); font-size: 15px; margin: 0 0 10px; }
+.sub { color: var(--mut); font-size: 13px; margin-bottom: 4px; }
+.barra { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; } .barra .esp { flex: 1; }
+.card { background: #fff; border: 1px solid #d5dae1; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+/* Formulário alinhado: rótulo com altura fixa (2 linhas) e controle com altura fixa */
+.grid { display: grid; gap: 10px 12px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); align-items: start; }
+.grid .c2 { grid-column: span 2; } .grid .c3 { grid-column: span 3; }
+@media (max-width: 560px) { .grid .c2, .grid .c3 { grid-column: span 1; } }
+.campo label { display: flex; align-items: flex-end; min-height: 30px; font-size: 12px; color: var(--mut); margin-bottom: 3px; line-height: 1.2; }
+input, select, textarea { font-family: inherit; font-size: 13px; border: 1px solid var(--bd); border-radius: 4px; padding: 0 8px; background: #fff; width: 100%; height: 34px; }
+textarea { height: auto; padding: 7px 8px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #9db8dc; border-color: var(--az); }
+input[type=checkbox] { width: auto; height: auto; }
+input[readonly] { background: #eef1f6; color: #444; }
+.tw { overflow-x: auto; border: 1px solid #d5dae1; border-radius: 8px; background: #fff; }
+.tbl { width: 100%; border-collapse: collapse; background: #fff; }
+.tbl th { background: var(--az); color: #fff; font-weight: normal; font-size: 12px; padding: 7px 6px; text-align: center; }
+.tbl td { border-top: 1px solid #e6e9ee; padding: 5px 6px; font-size: 13px; vertical-align: middle; }
+.tbl td.c { text-align: center; } .tbl td.r { text-align: right; }
+.tbl tr.pav td { background: #e8edf4; color: var(--az); font-weight: bold; }
+#tamb tr.pav { cursor: pointer; user-select: none; }
+#tamb tr.pav:hover td { background: #dde5f0; }
+#tamb tr.pav .seta { display: inline-block; width: 16px; font-size: 11px; }
+#tamb tr.pav .qtd { font-weight: normal; color: var(--mut); font-size: 12px; }
+#tamb tr.lin.rec { display: none !important; }
+#tamb.filtrando tr.lin.rec:not([hidden]) { display: table-row !important; }
+@media (max-width: 700px) { #tamb.filtrando tr.lin.rec:not([hidden]) { display: block !important; } }
+.tbl tr.tot td { background: #eef1f6; font-weight: bold; }
+.tbl tr.al td { background: #fff6e5; }
+.tbl tr.rd td { background: #efe3fa; }
+.tbl tr.rd.lin:hover td { background: #e4d2f5; }
+.tag.rd { background: #e6d5f5; color: #5b2c83; }
+.tbl td input, .tbl td select { height: 30px; }
+.tag { display: inline-block; font-size: 11px; padding: 2px 6px; border-radius: 10px; background: #fff1d6; color: var(--al); white-space: nowrap; }
+.tag.ok { background: #e3f3e5; color: #2e7d32; }
+.dica { font-size: 11px; color: var(--mut); margin-top: 3px; }
+.ed { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 14px; align-items: start; }
+@media (max-width: 960px) { .ed { grid-template-columns: 1fr; } .prev { position: static !important; } }
+.prev { position: sticky; top: 10px; } .prev .big { font-size: 28px; font-weight: bold; color: var(--az); }
+.prev table { width: 100%; border-collapse: collapse; font-size: 12px; } .prev td { padding: 3px 0; border-bottom: 1px dashed #e0e4ea; } .prev td:last-child { text-align: right; }
+.linha-multi { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); align-items: end; margin-bottom: 6px; }
+.linha-multi > * { min-width: 0; }
+.seta { padding: 1px 6px; line-height: 1.2; }
+#modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 14px; z-index: 30; }
+#modal .mb { background: #fff; border-radius: 8px; padding: 18px; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; }
+#busy { position: fixed; inset: 0; background: rgba(255,255,255,.55); z-index: 40; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--az); }
+#toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 6px; z-index: 50; max-width: 90%; }
+#toast.er { background: var(--er); }
+.tbl tr.lin:hover td { background: #e9f0fa; }
+.tbl tr.al.lin:hover td { background: #ffeecb; }
+.parea { font-size: 11px; color: var(--az); margin-top: 3px; min-height: 14px; }
+.totw { font-size: 13px; color: var(--az); text-align: right; margin-top: 6px; }
+#prevbar { display: none; position: fixed; left: 0; right: 0; bottom: 0; background: #1f3a5f; color: #fff; padding: 9px 14px; z-index: 20; font-size: 14px; text-align: center; }
+/* ===== Celular / tablet (só preenchimento; o PDF e o Excel mantêm o padrão de computador) ===== */
+@media (max-width: 960px) { #prevbar:not([hidden]) { display: block; } .conteudo { padding-bottom: 64px; } }
+@media (max-width: 700px) {
+  body { font-size: 15px; }
+  input, select, textarea { font-size: 16px; height: 42px; }
+  textarea { height: auto; }
+  input[type=checkbox] { width: 22px; height: 22px; }
+  button.acao { padding: 11px 14px; font-size: 14px; }
+  button.acao.sm { padding: 9px 12px; font-size: 13px; }
+  .btn-nav { padding: 9px 11px; }
+  h2 { font-size: 18px; }
+  .barra { gap: 6px; }
+  .barra > input { max-width: none !important; width: 100%; }
+  .barra > button.acao { flex: 1 1 auto; }
+  .barra > .dica { flex: 1 1 100% !important; }
+  .card { padding: 12px; }
+  .tw { border: none; background: none; overflow: visible; border-radius: 0; }
+  .tbl.resp, .tbl.resp tbody { display: block; width: 100%; background: none; }
+  .tbl.resp tr:first-child { display: none; }
+  .tbl.resp tr { display: block; background: #fff; border: 1px solid #d5dae1; border-radius: 8px; margin: 0 0 10px; padding: 6px 10px; }
+  .tbl.resp tr.pav, .tbl.resp tr.tot { background: #e8edf4; }
+  .tbl.resp tr.al { background: #fff6e5; }
+  .tbl.resp tr.rd { background: #efe3fa; }
+  .tbl.resp td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; padding: 5px 0; text-align: right !important; background: transparent !important; }
+  .tbl.resp td::before { content: attr(data-l); color: var(--mut); font-size: 12px; text-align: left; flex: 0 0 42%; }
+  .tbl.resp td:not([data-l])::before, .tbl.resp td[data-l=""]::before { display: none; }
+  .tbl.resp td:empty { display: none; }
+  .tbl.resp td input, .tbl.resp td select { width: 56%; flex: none; }
+  .tbl.resp td.acoes { justify-content: flex-end; flex-wrap: wrap; }
+  .tbl.resp tr.pav td, .tbl.resp tr.tot td[colspan] { display: block; text-align: left !important; }
+  .tbl.resp tr.pav td::before, .tbl.resp tr.tot td::before { display: none; }
+  .tbl.resp tr.tot td:first-child { font-weight: bold; }
+  .tbl.resp tr.tot td:not(:first-child)::before { display: block; }
+  .linha-multi { grid-template-columns: 1fr 1fr !important; }
+  .linha-multi > button { grid-column: span 2; }
+  #modal .mb { padding: 14px; }
+}
+
+/* ===== Tela nativa no app ENGELIX (barra enxuta, sem cabeçalho próprio) ===== */
+body { background: #f4f5f7; }
+.topo { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; gap: 6px; background: #fff; border-bottom: 1px solid #d5dae1; padding: 6px 10px; }
+.topo .tb { background: #f4f5f7; color: #1f3a5f; border: 1px solid #c4ccd6; border-radius: 8px; padding: 7px 11px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.topo .esp { flex: 1; }
+.barra.cmp > button.acao { flex: 0 0 auto; padding: 7px 12px; font-size: 13px; }
+.barra.cmp > .dica { flex: 1 1 auto !important; }
+.barra.nw { flex-wrap: nowrap; }
+.barra.nw > div:first-child { flex: 1 1 auto; min-width: 0; }
+.barra.nw .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra > button.ic { flex: 0 0 auto; width: 36px; height: 34px; }
+.obra-tit { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.obra-tit h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.il { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #e1e6ec; padding: 8px 0; }
+.il small { font-size: 12px; color: #4f5d6b; } .il span { font-size: 15px; color: #222; }
+</style>
+</head>
+<body>
+
+<div id="tela-login">
+  <img class="logo-login" alt="ENGELIX">
+  <div class="caixa-login">
+    <h1>Carga Térmica</h1>
+    <div id="area-nomes"><div class="carregando">Carregando...</div></div>
+    <div id="area-senha" style="display:none;">
+      <p id="nome-selecionado" style="font-weight:bold;"></p>
+      <div class="campo-senha-wrap">
+        <input type="password" id="campo-senha" placeholder="Senha" autocomplete="current-password" onkeydown="if (event.key === 'Enter') { tentarEntrar(); }">
+        <button type="button" class="btn-ver-senha" id="btn-ver-senha" onclick="alternarVerSenha()" title="Mostrar ou ocultar a senha" aria-label="Mostrar ou ocultar a senha"></button>
+      </div>
+      <div class="rodape-login">
+        <span style="cursor:pointer;color:#1f3a5f;text-decoration:underline;font-size:13px;" onclick="voltarParaNomes()">voltar</span>
+        <button class="acao" onclick="tentarEntrar()">Entrar</button>
+      </div>
+    </div>
+    <div id="erro-login" class="erro"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="topo">
+  <button class="tb" id="btn-voltar" onclick="voltar()" title="Voltar">&#8249; Voltar</button>
+  <button class="tb" id="btn-casa" onclick="irInicio()" title="Início da Carga Térmica">Obras</button>
+  <button class="tb" id="nb-params" onclick="irParams()" hidden>Parâmetros</button>
+  <span class="esp"></span>
+  <button class="tb" id="btn-info" onclick="infoApp()" title="Informações" aria-label="Informações"></button>
+  <span id="nome-usuario-topo" hidden></span>
+</div>
+  <div class="conteudo" id="main"></div>
+</div>
+
+<div id="modal" hidden><div class="mb" id="mb"></div></div>
+<div id="busy" hidden>Aguarde...</div>
+<div id="toast" hidden></div>
+<div id="prevbar" hidden></div>
+<!-- pdf.js (gratuito) para ler as pranchas no navegador -->
+<script type="module">
+  import * as pdfjs from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs';
+  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
+  window.pdfjsLib = pdfjs;
+</script>
+<script>
+/* ===================== Leitor das pranchas do PBA (ambientes por pavimento) - mesmo método do app de Memoriais ===================== */
+var LeitorPBA = (function () {
+  var LET = 'A-ZÁÉÍÓÚÂÊÔÃÕÇÀÜ';
+  var AREA = /^(\d{1,3}(?:\.\d{3})*,\d{2})\s*m²$/;
+  var COD = /^\d(\/\d)?$/;
+  var NUM = /^\d{2}$/;
+  var NOME = new RegExp('^[' + LET + '(][' + LET + 'a-zà-ú0-9 .\'()/\\-–]*$');
+  var PT = '(?:HF|HQ|AC|VF|E|ED|VP|FAM|FO|EE|FVC)\\*?', PTS = new RegExp('^' + PT + '(?:\\s*[;,]\\s*' + PT + ')*$');
+  var TIT = /PLANTA BAIXA\s+(?:DO\s+|DE\s+)?(PAVIMENTO\s+\d{1,2}|T[ÉE]RREO|SUBSOLO|COBERTURA|MEZANINO)/i;
+  var TIT_IGN = /PLANTA ESQUEM[ÁA]TICA|PLANTA DE LOCA[ÇC][ÃA]O|PLANTA DE SITUA[ÇC][ÃA]O|LAYOUT|PLANTA DE COBERTURA|PLANTA BAIXA\s+(?:DE\s+|DA\s+)?COBERTURA/i;
+  var LIXO = /\b(EXISTENTE|REFORMA|NOV[OA])\s+[PJ][NE]?\d+\b|\bJANELAS\b|\bLARGURA\b|\bESCALA$|^[PJ][NE]?\d+$/i;
+  var QUADRO = /^([PJ]\d+|JANELAS|PORTAS|PISO|ESCALA|PLANTA)/;
+
+  // texto de cada página em "tokens": um por linha de texto (junta pedaços colados na mesma linha)
+  async function tokensPagina(pagina) {
+    var tc = await pagina.getTextContent(), out = [], ult = null;
+    tc.items.forEach(function (it) {
+      var s = it.str; if (!s || !s.trim()) { if (it.hasEOL && ult) ult.fim = true; return; }
+      var t = it.transform, tam = Math.hypot(t[0], t[1]) || 1, dx = t[0] / tam, dy = t[1] / tam;
+      if (ult && !ult.fim && Math.hypot(t[4] - ult.x2, t[5] - ult.y2) < 1.6 * tam && Math.abs(tam - ult.tam) < 0.5) {
+        ult.s += (Math.hypot(t[4] - ult.x2, t[5] - ult.y2) > 0.25 * tam ? ' ' : '') + s;
+      } else { ult = { s: s, x: t[4], y: t[5], tam: tam }; out.push(ult); }
+      ult.x2 = t[4] + dx * it.width; ult.y2 = t[5] + dy * it.width; ult.fim = !!it.hasEOL;
+    });
+    out.forEach(function (o) { o.s = o.s.replace(/\s+/g, ' ').trim(); });
+    return out;
+  }
+
+  // Cada ambiente é lido pela área ("12,34 m²"); depois vêm o nome, os códigos e os pontos ("HF; AC; VF"). ac = true (tem ponto AC), false (tem pontos, sem AC), null (a prancha não traz pontos).
+  function lerTokens(toks) {
+    var titulos = [];
+    toks.forEach(function (t) {
+      if (t.tam < 9) return;
+      if (TIT_IGN.test(t.s)) titulos.push({ x: t.x, y: t.y, nome: null });              // desenho que não é planta de pavimento
+      else { var m = t.s.match(TIT); if (m) titulos.push({ x: t.x, y: t.y, nome: m[1].replace(/\s+/g, ' ').toUpperCase() }); }
+    });
+    var amb = [];
+    toks.forEach(function (t, i) {
+      var m = t.s.match(AREA); if (!m) return;
+      var nome = [], num = null, k = i + 1;
+      for (; k < Math.min(toks.length, i + 12); k++) {
+        var s = toks[k].s;
+        if (NUM.test(s) && nome.length && num === null && toks[k + 1] && COD.test(toks[k + 1].s.split(' ')[0])) { num = s; continue; }
+        if (COD.test(s.split(' ')[0]) || AREA.test(s) || PTS.test(s) || !NOME.test(s) || /^PISO/.test(s)) break;
+        nome.push(s);
+      }
+      if (!nome.length) return;
+      var pts = null;
+      for (var j = k; j < Math.min(toks.length, i + 16); j++) { if (AREA.test(toks[j].s)) break; if (PTS.test(toks[j].s)) { pts = toks[j].s; break; } }
+      var n = nome.join(' ').replace(/\s+(AC|HF|VF|E|ED)$/, '').replace(/\s*\(\s*/g, ' (').replace(/\s+/g, ' ').trim();
+      var mn = n.match(/^(.*\S)\s+(\d{2})$/); if (mn && !num) { n = mn[1]; num = mn[2]; }
+      if (QUADRO.test(n) || LIXO.test(n) || n.length < 3) return;
+      var dist = function (x) { return (t.y - x.y) + 1.5 * Math.abs(t.x - x.x); };          // o título fica abaixo do desenho
+      var abaixo = titulos.filter(function (x) { return x.y < t.y + 5; }).sort(function (a, b) { return dist(a) - dist(b); });
+      var tit = abaixo.length ? abaixo[0] : null;
+      if (!tit || !tit.nome) return;                                                        // sem título ou desenho ignorado
+      if (tit.nome === 'COBERTURA') return;
+      amb.push({ pav: tit.nome, area: m[1], nome: n, num: num, pts: pts, ac: pts ? /\bAC\b/.test(pts) : null });
+    });
+    return amb;
+  }
+
+  async function lerPDF(pdfjs, dados) {
+    var doc = await pdfjs.getDocument({ data: dados }).promise, res = { ambientes: [], paginas: doc.numPages };
+    for (var p = 1; p <= doc.numPages; p++) res.ambientes = res.ambientes.concat(lerTokens(await tokensPagina(await doc.getPage(p))));
+    return res;
+  }
+
+  // ---------- nomes ----------
+  var ABREV = { 'SANIT': 'SANITARIO', 'PUB': 'PUBLICO', 'FUNC': 'FUNCIONARIO', 'MASC': 'MASCULINO', 'FEM': 'FEMININO', 'TEMP': 'TEMPORARIO', 'ADM': 'ADMINISTRATIVA' };
+  var STOP = { 'DE': 1, 'DA': 1, 'DO': 1, 'DAS': 1, 'DOS': 1 };
+  function singular(w) {
+    if (w.length <= 3) return w;
+    if (/OES$/.test(w)) return w.slice(0, -3) + 'AO';
+    if (/[AEO]IS$/.test(w)) return w.slice(0, -2) + 'L';
+    if (/S$/.test(w) && !/SS$/.test(w)) return w.slice(0, -1);
+    return w;
+  }
+  function norm(s) {
+    return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean)
+      .map(function (w) { return singular(ABREV[w] || w); }).filter(function (w) { return !STOP[w]; }).join(' ');
+  }
+  function nomePav(p) {
+    if (/^PAVIMENTO\s+(\d+)/.test(p)) return 'Pavimento ' + ('0' + p.match(/\d+/)[0]).slice(-2);
+    if (/T[ÉE]RREO/.test(p)) return 'Pavimento Térreo';
+    return p.charAt(0) + p.slice(1).toLowerCase();
+  }
+  // nome legível a partir do texto da prancha (maiúsculas): expande abreviaturas e mantém siglas
+  var EXP = { 'SANIT': 'sanitário', 'PUB': 'público', 'FUNC': 'funcionário', 'MASC': 'masculino', 'FEM': 'feminino', 'TEMP': 'temporário', 'ADM': 'administrativa', 'ACESS': 'acessível' };
+  var SIGLAS = { 'DML': 'DML', 'RSSS': 'RSSS', 'AC': 'AC', 'WC': 'WC' };
+  function frase(s) {
+    var w = String(s).replace(/\s+/g, ' ').trim().split(' ').map(function (p) {
+      var m = p.match(/^(\(?)([^()]*?)(\.?)(\)?)$/), core = m ? m[2].toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+      if (m && EXP[core]) return m[1] + EXP[core] + m[4];
+      if (m && SIGLAS[core]) return m[1] + SIGLAS[core] + m[3] + m[4];
+      return p.toLowerCase();
+    }).join(' ');
+    var ab = (w.match(/\(/g) || []).length - (w.match(/\)/g) || []).length; while (ab-- > 0) w += ')';
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }
+  // lista = ambientes padrão do app (nome, rec = nomes reconhecidos nas pranchas, numerado)
+  function classificar(lidos, lista) {
+    var pads = [];
+    lista.forEach(function (l) {
+      String(l.rec || '').split(';').concat([l.nome]).forEach(function (nr) {
+        nr = String(nr).trim(); if (!nr) return;
+        var base = norm(nr.replace(/\(sem n[uú]mero\)/i, '').replace(/\bNN\b/g, '').replace(/\(\s*\d*\s*guich[eê]s\s*\)/i, ''));
+        if (base) pads.push({ l: l, base: base });
+      });
+    });
+    pads.sort(function (a, b) { return b.base.length - a.base.length; });
+    return lidos.map(function (a) {
+      var nn = norm(a.nome), achou = null, i, p;
+      return { pav: nomePav(a.pav), area: a.area, num: a.num, pts: a.pts, ac: a.ac, prancha: a.nome, base: frase(a.nome), numerado: false, padrao: true };
+    });
+  }
+  return { lerPDF: lerPDF, classificar: classificar, norm: norm };
+})();
+</script>
+<script>
+var CHAVE_PORTAL_TPL = '';
+var PORTAL_API = 'https://script.google.com/macros/s/AKfycbxF-7TOyL8YyNmawN-MW3crYqy5YALc3vVWW8mGkWTSOPGgigx4rhgdCM8IvOc_RqMT/exec';
+var CT_API = 'https://script.google.com/macros/s/AKfycbwhvIaX2rnR0hOfiIRG4JRE29uKjcjNxYI3gzY0PTrt9WvWZecmyHZqCHfobf05vZGS/exec';
+var CHAVE_SESSAO = 'ct_sessao_v1';
+var SISTEMA_PORTAL = 'cargatermica';
+var VERSAO_APP = 'versão 12/11-8';   // aumente este número a cada alteração: aparece no topo e mostra qual versão está no ar
+var ICONE_OLHO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+var ICONE_OLHO_RISCADO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+var ORIENT = [['N','Norte'],['NE','Nordeste'],['L','Leste'],['SE','Sudeste'],['S','Sul'],['SO','Sudoeste'],['O','Oeste'],['NO','Noroeste']];
+var TETOS = [['laje_exp','Laje exposta ao sol, sem isolamento'],['laje_iso','Laje com 2,5 cm de isolação ou mais'],['entre','Entre andares'],['telh_iso','Sob telhado com isolação'],['telh_sem','Sob telhado sem isolação']];
+var S = { sessao:null, ctx:null, obras:[], disp:[], obra:null, tela:'obras', tab:'ambientes', itens:[], proximoAC:1, resumo:null, edits:{}, amb:null, compl:'', baseAmb:'', equip:[], aparelhos:[], listaAmb:[], params:null, seq:0, filtro:'' };
+var nBusy = 0, tmrPrev = null, tmrToast = null;
+
+/* ---------- util ---------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function fmt(n, d){ if (n === '' || n == null || isNaN(n)) return ''; return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function nv(v){ return (v === 0 || v === '' || v == null) ? '' : String(v).replace('.', ','); }
+function f2(v){ if (v === '' || v == null) return ''; var n = typeof v === 'number' ? v : pn(v); if (isNaN(n)) return ''; return n.toFixed(2).replace('.', ','); }
+function nv2(v){ return (v === 0 || v === '' || v == null) ? '' : f2(v); }
+function pn(s){ var n = parseFloat(String(s).replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+function acTxt(n){ return (n === '' || n == null) ? '' : 'AC-' + n; }
+// AC pode ser número ou número com letra (ex.: 4a). Devolve '' se o texto for inválido.
+function acNorm(t){ var s = String(t == null ? '' : t).replace(/^\s*AC\s*-?\s*/i, '').replace(/\s+/g, ''), m = s.match(/^(\d+)([A-Za-z]?)$/); if (!m) return ''; return m[2] ? parseInt(m[1], 10) + m[2].toLowerCase() : parseInt(m[1], 10); }
+function busy(on){ nBusy += on ? 1 : -1; if (nBusy < 0) nBusy = 0; $('busy').hidden = nBusy === 0; }
+function toast(msg, er){ var t = $('toast'); t.textContent = msg; t.className = er ? 'er' : ''; t.hidden = false; clearTimeout(tmrToast); tmrToast = setTimeout(function(){ t.hidden = true; }, er ? 6000 : 2800); }
+function srv(fn){
+  var args = [].slice.call(arguments, 1);
+  return fetch(CT_API, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) })
+    .then(function(r){ return r.json(); })
+    .catch(function(){ throw new Error('Sem conexão com o servidor. Tente de novo.'); })
+    .then(function(x){ if (x && x.ok === false) { var e = new Error(x.erro || 'Erro'); e.auth = x.auth; throw e; } return x; });
+}
+function api(fn){ var a = [].slice.call(arguments, 1); return srv.apply(null, [fn, S.sessao.nome, S.sessao.senha].concat(a)); }
+function chamar(fn){
+  var a = [].slice.call(arguments);
+  busy(true);
+  return api.apply(null, a).then(function(r){ busy(false); return r; }, function(e){ busy(false); if (e.auth) { sair(true); } toast(e.message, true); throw e; });
+}
+function modal(html){ $('mb').innerHTML = html; $('modal').hidden = false; }
+function fechaModal(){ $('modal').hidden = true; }
+
+
+/* ---------- login (padrão do Controle) ---------- */
+function fimDoDia(){ var d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
+function lerSessaoSalva(){ try { var s = JSON.parse(localStorage.getItem(CHAVE_SESSAO)); if (s && s.expira > Date.now()) return s; } catch (e) {} return null; }
+function gravaSessao(nome, senha){ try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify({ nome: nome, senha: senha, expira: fimDoDia() })); } catch (e) {} }
+function definirVerSenha(v){ var c = $('campo-senha'); c.type = v ? 'text' : 'password'; $('btn-ver-senha').innerHTML = v ? ICONE_OLHO_RISCADO : ICONE_OLHO; }
+function alternarVerSenha(){ definirVerSenha($('campo-senha').type === 'password'); }
+
+window.onload = function () {
+  document.addEventListener('input', aoDigitar);
+  document.addEventListener('change', aoDigitar);
+  iniciar();
+};
+function lerPortal_(){ try { var s = JSON.parse(localStorage.getItem('engelix_sessao')); return (s && s.token) ? s : null; } catch (e) { return null; } }
+function erroInicial(msg){
+  $('app').style.display = 'none'; $('tela-login').style.display = 'flex';
+  $('area-nomes').innerHTML = ''; $('erro-login').textContent = msg || 'Não foi possível entrar.';
+}
+function iniciar(){
+  var salva = lerSessaoSalva(), p = lerPortal_();
+  if (salva && p && norm1_(salva.nome) === norm1_(p.nome)) { entrarComCredenciais(salva.nome, salva.senha, true); return; }
+  porChave_();
+}
+function norm1_(t){ return String(t == null ? '' : t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase(); }
+function porChave_(){
+  var p = lerPortal_();
+  if (!p) { erroInicial('Sua sessão do app terminou. Volte ao início do app e entre novamente.'); return; }
+  fetch(PORTAL_API, { method: 'POST', body: JSON.stringify({ acao: 'abrir', token: p.token, id: SISTEMA_PORTAL }) })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j.ok) throw new Error(j.erro || 'Não foi possível entrar.');
+      var m = String((j.dados && j.dados.url) || '').match(/[?&]chave=([^&#]+)/);
+      if (!m) throw new Error('Não foi possível entrar (chave não recebida).');
+      return srv('entrarComChavePortal', decodeURIComponent(m[1]));
+    })
+    .then(function (c) { entrarComCredenciais(c.nome, c.senha, false); })
+    .catch(function (e) { erroInicial(e && e.message ? e.message : 'Não foi possível entrar.'); });
+}
+function entrarComCredenciais(nome, senha, silencioso) {
+  srv('obterContextoUsuario', nome, senha).then(function (c) {
+    gravaSessao(nome, senha); S.sessao = { nome: nome, senha: senha }; abrirApp(c);
+  }).catch(function (e) {
+    if (silencioso) { try { localStorage.removeItem(CHAVE_SESSAO); } catch (x) {} porChave_(); }
+    else erroInicial(e && e.message ? e.message : 'Não foi possível entrar.');
+  });
+}
+function sair(silencioso){
+  try { localStorage.removeItem(CHAVE_SESSAO); } catch (e) {}
+  S.sessao = null; $('app').style.display = 'none'; $('tela-login').style.display = 'flex';
+  $('area-nomes').innerHTML = '<div class="carregando">Carregando...</div>'; $('erro-login').textContent = '';
+  porChave_();
+}
+async function abrirApp(c){
+  S.ctx = c; $('tela-login').style.display = 'none'; $('app').style.display = 'block';
+  $('nome-usuario-topo').textContent = c.nome + ' · ' + VERSAO_APP;
+  $('nb-params').hidden = !c.podeParametros;
+  try { var e = await api('listarEquipamentos'); S.equip = e.equip; } catch (x) {}
+  irObras();
+}
+/* ---------- navegação (Voltar e Casinha) ---------- */
+function irPortal(){ try { window.parent.postMessage({ engelixCT: 'portal' }, '*'); } catch (e) {} }
+var P_INFO = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>';
+var P_LAPIS = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>';
+var P_LIXO = '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>';
+function ico(p){ return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; }
+document.addEventListener('DOMContentLoaded', function(){ var b = document.getElementById('btn-info'); if (b) b.innerHTML = ico(P_INFO); });
+function infoApp(){
+  modal('<h3>Carga Térmica</h3><div class="il"><small>Usuário</small><span>' + esc(S.ctx ? S.ctx.nome : '') + '</span></div><div class="il"><small>Versão</small><span>' + esc(VERSAO_APP) + '</span></div><div class="barra" style="margin:14px 0 0"><div class="esp"></div><button class="acao" onclick="fechaModal()">Fechar</button></div>');
+}
+function infoObra(){
+  var o = S.obra;
+  var L = function(r, v){ return '<div class="il"><small>' + r + '</small><span>' + v + '</span></div>'; };
+  modal('<h3>' + esc(o.nome) + '</h3>' + L('Endereço', esc(o.endereco) + (o.cep ? ' · CEP ' + esc(o.cep) : '')) + L('Revisão', esc(o.revisao)) + L('Construção', esc(o.construcao)) + L('Fator geográfico', nv(o.fatGeo)) + L('Trecho vertical', fmt(o.trechoV, 2) + ' m') + L('Margem', fmt(o.margem, 2) + '%') + L('Pé-direito estrutural', o.pdEst > 0 ? fmt(o.pdEst, 2) + ' m' : '<b style="color:var(--er)">não informado (use Editar obra)</b>') + '<div class="barra" style="margin:14px 0 0"><div class="esp"></div><button class="acao" onclick="fechaModal()">Fechar</button></div>');
+}
+function infoResumo(){
+  modal('<h3>Resumo</h3><div class="dica">Edite <b>Aparelho adotado</b>, <b>Renomeado</b> e <b>Comprimento da tubulação em planta</b> e toque em Salvar. Os ambientes seguem a ordem crescente do <b>AC analisado</b>. Use <b>Renumerar</b> para preencher <b>Renomeado</b> na sequência, sem lacunas (AC-1, AC-3 → AC-1, AC-2); a numeração só muda quando você toca em Renumerar. A carga (W) usa o aparelho adotado; se vazio, o previsto REV 00; se vazio, o sugerido.</div><div class="barra" style="margin:14px 0 0"><div class="esp"></div><button class="acao" onclick="fechaModal()">Fechar</button></div>');
+}
+function voltar(){
+  if (S.tela === 'ambiente') return cancelaAmb();
+  if (S.tela === 'importar') return cancelaImp();
+  if (S.tela === 'obra') return irObras();
+  if (S.tela === 'params') return irObras();
+  irPortal();
+}
+function irInicio(){
+  if (S.tela === 'ambiente' && !confirm('Sair sem salvar as alterações deste ambiente?')) return;
+  if (S.tela === 'obra' && S.tab === 'resumo' && Object.keys(S.edits).length && !confirm('Há alterações não salvas no Resumo. Sair sem salvar?')) return;
+  if (S.tela === 'importar' && !confirm('Sair sem importar os ambientes?')) return;
+  irObras();
+}
+
+/* ---------- OBRAS ---------- */
+async function irObras(){
+  S.tela = 'obras'; S.obra = null; $('prevbar').hidden = true;
+  var r = await chamar('listarObras'); S.obras = r.obras; S.disp = r.disponiveis;
+  var h = '<div class="barra cmp"><div><h2>Obras</h2></div><div class="esp"></div><button class="acao" onclick="formObra()">+ Cadastrar obra</button></div>';
+  if (!S.obras.length) h += '<div class="card">Nenhuma obra cadastrada neste app ainda. Clique em <b>Cadastrar obra</b> e escolha uma das obras do Controle de Projetos.</div>';
+  else h += '<div class="tw"><table class="tbl resp"><tr><th>Obra</th><th>Endereço</th><th>Revisão</th><th>Ambientes</th><th></th></tr>' +
+    S.obras.map(function(o){ return '<tr class="lin"><td data-l="Obra"><b>' + esc(o.nome) + '</b></td><td data-l="Endereço">' + esc(o.endereco) + '</td><td class="c" data-l="Revisão">' + esc(o.revisao) + '</td><td class="c" data-l="Ambientes">' + o.qtd + '</td><td class="c acoes" style="white-space:nowrap"><button class="acao sm" onclick="abrirObra(\'' + o.id + '\')">Abrir</button> <button class="acao sm secundaria" onclick="formObra(\'' + o.id + '\')">Editar</button>' + (S.ctx.podeParametros ? ' <button class="acao sm perigo" onclick="excluiObra(\'' + o.id + '\')">Excluir</button>' : '') + '</td></tr>'; }).join('') + '</table></div>';
+  $('main').innerHTML = h;
+}
+function formObra(id){
+  var o = id ? (S.obras.filter(function(x){ return x.id === id; })[0] || S.obra) : { nome: '', revisao: 'REV 00', fatGeo: 1, construcao: 'pesada', trechoV: 3.85, margem: 10, numPav: '', pd: '', laje: '', pdEst: 0 };
+  var sel;
+  if (id) sel = '<div class="campo"><label>Obra (cadastrada no Controle de Projetos)</label><input value="' + esc(o.nome) + '" readonly id="o_nome"></div><div class="dica" style="margin-bottom:10px">' + esc(o.endereco) + '</div>';
+  else if (!S.disp.length) { modal('<h3>Cadastrar obra</h3><p>Não há obras disponíveis. Todas as obras ativas do Controle de Projetos já estão cadastradas neste app. Para incluir uma obra nova, cadastre-a primeiro no Controle de Projetos (aba ImoveisCadastrados).</p><div class="barra"><div class="esp"></div><button class="acao secundaria" onclick="fechaModal()">Fechar</button></div>'); return; }
+  else sel = '<div class="campo"><label>Obra (cadastrada no Controle de Projetos)</label><select id="o_nome"><option value="">Selecione...</option>' + S.disp.map(function(x){ return '<option value="' + esc(x.nome) + '">' + esc(x.nome) + '</option>'; }).join('') + '</select></div><div style="margin-bottom:10px"></div>';
+  modal('<h3>' + (id ? 'Editar obra' : 'Cadastrar obra') + '</h3>' + sel +
+    '<div class="grid" style="margin-bottom:10px"><div class="campo"><label>Revisão</label><input id="o_rev" value="' + esc(o.revisao) + '"></div>' +
+    '<div class="campo"><label>Fator geográfico</label><input id="o_fg" data-dec="2" inputmode="decimal" value="' + nv2(o.fatGeo) + '"></div>' +
+    '<div class="campo"><label>Construção</label><select id="o_cons"><option value="pesada"' + (o.construcao === 'pesada' ? ' selected' : '') + '>Pesada</option><option value="leve"' + (o.construcao === 'leve' ? ' selected' : '') + '>Leve</option></select></div>' +
+    '<div class="campo"><label>Trecho vertical padrão (m)</label><input id="o_tv" data-dec="2" inputmode="decimal" value="' + nv2(o.trechoV) + '"></div>' +
+    '<div class="campo"><label>Margem de tubulação (%)</label><input id="o_mg" data-dec="2" inputmode="decimal" value="' + nv2(o.margem) + '"></div>' +
+    '<div class="campo"><label>Nº de pavimentos da obra</label><input id="o_np" inputmode="numeric" value="' + nv(o.numPav) + '" placeholder="Ex.: 2"></div>' +
+    '<div class="campo"><label>Pé-direito piso a piso (m)</label><input id="o_pd" data-dec="2" inputmode="decimal" value="' + nv2(o.pd) + '" placeholder="Ex.: 3,50" oninput="pdEstObra()" onchange="pdEstObra()"></div>' +
+    '<div class="campo"><label>Espessura do piso - considerando a laje (m)</label><input id="o_lj" data-dec="2" inputmode="decimal" value="' + nv2(o.laje) + '" placeholder="Ex.: 0,15" oninput="pdEstObra()" onchange="pdEstObra()"></div>' +
+    '<div class="campo"><label>Pé-direito estrutural (m) - calculado</label><input id="o_pe" readonly value="' + (o.pdEst > 0 ? f2(o.pdEst) : '') + '"></div></div>' +
+    '<div class="dica">Fator geográfico: ver mapa da ABNT NBR 5858. O trecho vertical é uma estimativa de sobra de tubulação, relacionada ao pé-direito, e vale para todos os ambientes da obra. Pé-direito estrutural = pé-direito piso a piso - espessura do piso (considerando a laje); ele é usado para calcular a área das paredes.</div>' +
+    '<div class="barra" style="margin:14px 0 0"><div class="esp"></div><button class="acao secundaria" onclick="fechaModal()">Cancelar</button><button class="acao" onclick="salvaObra(' + (id ? "'" + id + "'" : 'null') + ')">Salvar</button></div>');
+}
+function pdEstObra(){ var v = pn($('o_pd').value) - pn($('o_lj').value); $('o_pe').value = v > 0 ? f2(v) : ''; }
+async function salvaObra(id){
+  var o = { id: id, nome: $('o_nome').value, revisao: $('o_rev').value, fatGeo: pn($('o_fg').value) || 1, construcao: $('o_cons').value, trechoV: pn($('o_tv').value), margem: pn($('o_mg').value), numPav: Math.round(pn($('o_np').value)), pd: pn($('o_pd').value), laje: pn($('o_lj').value) };
+  if (!o.nome) return toast('Selecione a obra.', true);
+  if (o.numPav < 1) return toast('Informe o nº de pavimentos da obra.', true);
+  if (o.pd <= 0) return toast('Informe o pé-direito piso a piso da obra.', true);
+  if (o.laje <= 0) return toast('Informe a espessura do piso (considerando a laje).', true);
+  if (o.laje >= o.pd) return toast('A espessura do piso deve ser menor que o pé-direito.', true);
+  var r = await chamar('salvarObra', o); fechaModal(); toast('Obra salva.');
+  if (id && S.obra) { await abrirObra(id, S.tab); } else if (!id) { await abrirObra(r.id); } else irObras();
+}
+async function excluiObra(id){
+  var o = S.obras.filter(function(x){ return x.id === id; })[0] || S.obra;
+  var qtd = (S.obra && S.obra.id === id) ? S.itens.length : (o.qtd || 0);
+  if (!confirm('Excluir a obra "' + o.nome + '" e ' + qtd + ' ambiente(s) cadastrado(s)? Esta ação não pode ser desfeita.')) return;
+  await chamar('excluirObra', id); toast('Obra excluída.'); irObras();
+}
+/* ---------- OBRA ---------- */
+async function abrirObra(id, tab){
+  S.tela = 'obra'; S.tab = tab || 'ambientes'; S.edits = {};
+  var r = await chamar('listarAmbientes', id); S.obra = r.obra; S.itens = r.itens; S.proximoAC = r.proximoAC;
+  if (S.tab === 'resumo') { S.resumo = await chamar('obterResumo', id); }
+  renderObra();
+}
+function renderObra(){
+  var o = S.obra; $('prevbar').hidden = true;
+  var h = '<div class="barra cmp nw"><div class="obra-tit"><h2>' + esc(o.nome) + '</h2><button class="ic secundaria" title="Informações da obra" onclick="infoObra()">' + ico(P_INFO) + '</button></div><div class="esp"></div><button class="ic secundaria" title="Editar obra" onclick="formObra(\'' + o.id + '\')">' + ico(P_LAPIS) + '</button>' + (S.ctx.podeParametros ? '<button class="ic perigo" title="Excluir obra" onclick="excluiObra(\'' + o.id + '\')">' + ico(P_LIXO) + '</button>' : '') + '</div>' +
+    '<div class="abas"><button class="' + (S.tab === 'ambientes' ? 'ativa' : '') + '" onclick="trocaAba(\'ambientes\')">Ambientes</button><button class="' + (S.tab === 'resumo' ? 'ativa' : '') + '" onclick="trocaAba(\'resumo\')">Resumo</button></div><div style="height:12px"></div>';
+  h += S.tab === 'ambientes' ? htmlAmbientes() : htmlResumo();
+  $('main').innerHTML = h;
+}
+async function trocaAba(t){
+  if (S.tab === 'resumo' && Object.keys(S.edits).length && !confirm('Há alterações não salvas no Resumo. Sair sem salvar?')) return;
+  abrirObra(S.obra.id, t);
+}
+function statusAmb(c){ return c.pend && c.pend.length ? '<span class="tag" title="Pendente: ' + esc(c.pend.join(', ')) + '">pendente (' + c.pend.length + ')</span>' : '<span class="tag ok">completo</span>'; }
+function htmlAmbientes(){
+  var pend = S.itens.filter(function(it){ return it.c.pend && it.c.pend.length; }).length;
+  var h = '<div class="barra"><input id="filtro" placeholder="Filtrar por ambiente, AC ou pavimento..." value="' + esc(S.filtro) + '" oninput="S.filtro=this.value;filtraAmb()"></div><div class="barra cmp"><div class="dica">' + S.itens.length + ' ambiente(s)' + (pend ? ' · ' + pend + ' pendente(s)' : '') + '</div><button class="acao secundaria" onclick="escolheArquivosPBA()">Importar PDF</button><button class="acao" onclick="novoAmb()">+ Novo ambiente</button></div>';
+  if (!S.itens.length) return h + '<div class="card">Nenhum ambiente nesta obra. Clique em <b>Novo ambiente</b>.</div>';
+  h += '<div style="display:flex;gap:8px;margin:0 0 8px"><button class="acao sm secundaria" onclick="todosPav(true)">Minimizar pavimentos</button><button class="acao sm secundaria" onclick="todosPav(false)">Expandir pavimentos</button></div>';
+  h += '<div class="tw"><table class="tbl resp" id="tamb"><tr><th>AC analisado</th><th>AC renomeado</th><th>Ambiente</th><th>Área (m²)</th><th>Carga calculada (BTU)</th><th>Aparelho sugerido</th><th>Previsto REV 00</th><th>Aparelho adotado</th><th>Redução confirmada</th><th>Situação</th><th></th></tr>';
+  var pav = null, cont = {};
+  S.itens.forEach(function(it){ cont[it.a.pav] = (cont[it.a.pav] || 0) + 1; });
+  S.itens.forEach(function(it){
+    var a = it.a, c = it.c;
+    if (a.pav !== pav) { pav = a.pav; h += '<tr class="pav" data-gp="' + esc(pav) + '" onclick="togglePav(this)" title="Clique para minimizar ou expandir este pavimento"><td colspan="11"><span class="seta">' + (pavFechado(pav) ? '▶' : '▼') + '</span> ' + esc(pav || '(sem pavimento)') + ' <span class="qtd">· ' + cont[pav] + ' ambiente(s)</span></td></tr>'; }
+    h += '<tr class="lin ' + (c.alerta ? 'al' : '') + (c.reduz && a.reducao ? ' rd' : '') + (pavFechado(a.pav) ? ' rec' : '') + '" data-g="' + esc(a.pav) + '" data-t="' + esc((a.nome + ' ' + acTxt(a.acAnalisado) + ' ' + acTxt(a.acRenomeado) + ' ' + a.pav).toLowerCase()) + '"><td class="c" data-l="AC analisado"><b>' + acTxt(a.acAnalisado) + '</b></td><td class="c" data-l="AC renomeado">' + acTxt(a.acRenomeado) + '</td><td data-l="Ambiente">' + esc(a.nome) + '</td><td class="r" data-l="Área (m²)">' + fmt(a.piso, 2) + '</td><td class="r" data-l="Carga calculada (BTU)">' + fmt(c.btu, 0) + '</td><td class="c" data-l="Aparelho sugerido">' + (c.sug ? fmt(c.sug, 0) : (c.acima ? '<span class="tag">acima do maior</span>' : '')) + '</td><td class="c" data-l="Previsto REV 00">' + (a.previsto ? fmt(a.previsto, 0) : '') + (c.alerta ? ' <span class="tag">⚠ menor que o calculado</span>' : '') + '</td><td class="c" data-l="Aparelho adotado">' + (a.adotado ? fmt(a.adotado, 0) : '') + '</td><td class="c" data-l="Redução confirmada">' + (c.reduz ? '<input type="checkbox" title="Confirmar a redução do previsto (REV 00) para o aparelho sugerido" ' + (a.reducao ? 'checked ' : '') + 'onchange="marcaRed(\'' + a.id + '\', this.checked, this)">' : '') + '</td><td class="c" data-l="Situação">' + statusAmb(c) + '</td>' +
+      '<td class="c acoes" style="white-space:nowrap"><button class="ic " title="Editar" aria-label="Editar" onclick="editaAmb(\'' + a.id + '\')"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button> <button class="ic secundaria" title="Duplicar" aria-label="Duplicar" onclick="dupAmb(\'' + a.id + '\')"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button> <button class="ic perigo" title="Excluir" aria-label="Excluir" onclick="delAmb(\'' + a.id + '\')"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></td></tr>';
+  });
+  return h + '</table></div>';
+}
+function filtraAmb(){
+  var q = S.filtro.toLowerCase().trim();
+  var rows = document.querySelectorAll('#tamb tr[data-t]');
+  for (var i = 0; i < rows.length; i++) rows[i].hidden = q && rows[i].getAttribute('data-t').indexOf(q) < 0;
+  var t = $('tamb'); if (t) t.classList.toggle('filtrando', !!q);   // ao filtrar, os pavimentos minimizados também mostram o resultado
+}
+// Minimizar / expandir o pavimento na aba Ambientes (o estado vale enquanto o app estiver aberto)
+function pavFechado(p){ S.fechados = S.fechados || {}; return !!S.fechados[(S.obra ? S.obra.id : '') + '|' + p]; }
+function aplicaPav(){
+  document.querySelectorAll('#tamb tr.pav').forEach(function(tr){
+    var p = tr.getAttribute('data-gp'), f = pavFechado(p);
+    tr.querySelector('.seta').textContent = f ? '▶' : '▼';
+    document.querySelectorAll('#tamb tr.lin').forEach(function(l){ if (l.getAttribute('data-g') === p) l.classList.toggle('rec', f); });
+  });
+}
+// Check "redução confirmada" (previsto -> sugerido): salva na hora e pinta a linha de lilás
+async function marcaRed(id, v, el){
+  var tr = el.closest('tr');
+  try { await chamar('marcarReducao', S.obra.id, id, v); } catch (e) { el.checked = !v; return; }
+  (S.itens || []).forEach(function(it){ if (it.a.id === id) it.a.reducao = v; });
+  if (S.resumo) S.resumo.linhas.forEach(function(l){ if (l.id === id) l.reducao = v; });
+  if (tr) tr.classList.toggle('rd', v);
+  toast(v ? 'Redução confirmada.' : 'Redução desmarcada.');
+}
+function togglePav(tr){
+  var k = (S.obra ? S.obra.id : '') + '|' + tr.getAttribute('data-gp'); S.fechados = S.fechados || {};
+  S.fechados[k] = !S.fechados[k]; aplicaPav();
+}
+function todosPav(fechar){
+  S.fechados = S.fechados || {};
+  document.querySelectorAll('#tamb tr.pav').forEach(function(tr){ S.fechados[(S.obra ? S.obra.id : '') + '|' + tr.getAttribute('data-gp')] = fechar; });
+  aplicaPav();
+}
+async function dupAmb(id){ var r = await chamar('duplicarAmbiente', id); toast('Ambiente duplicado.'); await abrirObra(S.obra.id); editaAmb(r.id); }
+async function delAmb(id){
+  var it = S.itens.filter(function(x){ return x.a.id === id; })[0];
+  if (!confirm('Excluir o ambiente "' + it.a.nome + '"? Esta ação não pode ser desfeita.')) return;
+  await chamar('excluirAmbiente', id); toast('Ambiente excluído.'); abrirObra(S.obra.id, 'ambientes');
+}
+
+/* ---------- RESUMO ---------- */
+function optEquip(sel, vazio){
+  return '<option value="">' + (vazio || '—') + '</option>' + S.equip.map(function(e){ return '<option value="' + e.btu + '"' + (Number(sel) === e.btu ? ' selected' : '') + '>' + fmt(e.btu, 0) + '</option>'; }).join('');
+}
+function htmlResumo(){
+  var R = S.resumo; if (!R) return '';
+  var pend = R.linhas.filter(function(l){ return l.pend.length; }).length;
+  var h = '<div class="barra cmp"><button class="ic secundaria" title="Como usar o Resumo" onclick="infoResumo()">' + ico(P_INFO) + '</button>' + (pend ? '<div class="dica"><b>' + pend + ' ambiente(s) com pendência.</b></div>' : '') + '<div class="esp"></div><button class="acao" onclick="salvaResumo()">Salvar</button><button class="acao secundaria" onclick="renumera()">Renumerar</button><button class="acao secundaria" onclick="menuExporta()">Exportar</button></div>';
+  if (!R.linhas.length) return h + '<div class="card">Sem ambientes para resumir.</div>';
+  h += '<div class="tw"><table class="tbl resp"><tr><th>Ambiente</th><th>Área (m²)</th><th>AC analisado</th><th>Carga calculada (BTU)</th><th>Aparelho sugerido</th><th>Previsto REV 00</th><th>Redução confirmada</th><th>Aparelho adotado</th><th>Renomeado</th><th>Comprimento da tubulação em planta (m)</th><th>Dim. total (m)</th><th>Dim. + margem (m)</th><th>Carga (W)</th></tr>';
+  var pav = null, acc = null, ger = { a: 0, d: 0, m: 0, w: 0 };
+  var fecha = function(){ if (acc) h += '<tr class="tot"><td>Total ' + esc(pav) + '</td><td class="r" data-l="Área (m²)">' + fmt(acc.a, 2) + '</td><td colspan="8"></td><td class="r" data-l="Dim. total (m)">' + fmt(acc.d, 2) + '</td><td class="r" data-l="Dim. + margem (m)">' + fmt(acc.m, 2) + '</td><td class="r" data-l="Carga (W)">' + fmt(acc.w, 0) + '</td></tr>'; };
+  R.linhas.forEach(function(l){
+    if (l.pav !== pav) { fecha(); pav = l.pav; acc = { a: 0, d: 0, m: 0, w: 0 }; h += '<tr class="pav"><td colspan="13">' + esc(pav || '(sem pavimento)') + '</td></tr>'; }
+    acc.a += l.area; acc.d += l.dimTotal || 0; acc.m += l.dimMais || 0; acc.w += l.w || 0; ger.a += l.area; ger.d += l.dimTotal || 0; ger.m += l.dimMais || 0; ger.w += l.w || 0;
+    h += '<tr class="lin ' + (l.alerta ? 'al' : '') + (l.reduz && l.reducao ? ' rd' : '') + '">' +
+      '<td data-l="Ambiente">' + esc(l.nome) + '</td><td class="r" data-l="Área (m²)">' + fmt(l.area, 2) + '</td><td class="c" data-l="AC analisado"><b>' + acTxt(l.acAnalisado) + '</b></td><td class="r" data-l="Carga calculada (BTU)">' + fmt(l.btu, 0) + '</td><td class="c" data-l="Aparelho sugerido">' + (l.sug ? fmt(l.sug, 0) : '') + '</td><td class="c" data-l="Previsto REV 00">' + (l.previsto ? fmt(l.previsto, 0) : '') + (l.alerta ? ' ⚠' : '') + '</td>' +
+      '<td class="c" data-l="Redução confirmada">' + (l.reduz ? '<input type="checkbox" title="Confirmar a redução do previsto (REV 00) para o aparelho sugerido" ' + (l.reducao ? 'checked ' : '') + 'onchange="marcaRed(\'' + l.id + '\', this.checked, this)">' : '') + '</td>' +
+      '<td data-l="Aparelho adotado"><select data-id="' + l.id + '" data-f="adotado">' + optEquip(l.adotado, 'pendente') + '</select></td>' +
+      '<td data-l="Renomeado"><input data-id="' + l.id + '" data-f="acRenomeado" value="' + esc(l.acRenomeado) + '" placeholder="Ex.: 4 ou 4a" style="min-width:60px;text-align:center"></td>' +
+      '<td data-l="Tubulação em planta (m)"><input data-id="' + l.id + '" data-f="tubPlanta" data-dec="2" inputmode="decimal" value="' + nv2(l.tubPlanta) + '" placeholder="pendente" style="min-width:80px;text-align:right"></td>' +
+      '<td class="r" data-l="Dim. total (m)">' + (l.dimTotal == null ? '<span class="tag">pendente</span>' : fmt(l.dimTotal, 2)) + '</td><td class="r" data-l="Dim. + margem (m)">' + (l.dimMais == null ? '<span class="tag">pendente</span>' : fmt(l.dimMais, 2)) + '</td><td class="r" data-l="Carga (W)">' + (l.w == null ? '<span class="tag">sem W</span>' : fmt(l.w, 0)) + '</td></tr>';
+  });
+  fecha();
+  h += '<tr class="tot"><td>TOTAL GERAL</td><td class="r" data-l="Área (m²)">' + fmt(ger.a, 2) + '</td><td colspan="8"></td><td class="r" data-l="Dim. total (m)">' + fmt(ger.d, 2) + '</td><td class="r" data-l="Dim. + margem (m)">' + fmt(ger.m, 2) + '</td><td class="r" data-l="Carga (W)">' + fmt(ger.w, 0) + '</td></tr></table></div>';
+  return h;
+}
+async function salvaResumoSilencioso(){
+  var l = Object.keys(S.edits).map(function(id){ var e = S.edits[id]; e.id = id; return e; });
+  if (l.length) await chamar('salvarResumoEdicoes', S.obra.id, l);
+  S.edits = {};
+}
+async function salvaResumo(){
+  if (!Object.keys(S.edits).length) return toast('Nenhuma alteração para salvar.');
+  await salvaResumoSilencioso(); toast('Alterações salvas.'); abrirObra(S.obra.id, 'resumo');
+}
+async function renumera(){
+  if (!confirm('Renumerar o campo "Renomeado" em sequência (1, 2, 3...), seguindo a ordem crescente do AC analisado e mantendo as letras (ex.: 4a e 4b ficam juntos)? Os números atuais serão substituídos.')) return;
+  await salvaResumoSilencioso(); await chamar('renumerarObra', S.obra.id); toast('Renumeração concluída.'); abrirObra(S.obra.id, 'resumo');
+}
+async function exporta(f){
+  if (Object.keys(S.edits).length && confirm('Há alterações não salvas. Salvar antes de exportar?')) await salvaResumoSilencioso();
+  var r = await chamar('exportarResumo', S.obra.id, f);
+  var bin = atob(r.base64), arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([arr], { type: r.mime })); a.download = r.nomeArquivo;
+  document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast('Arquivo gerado: ' + r.nomeArquivo);
+}
+
+// ZIP simples (sem compressão) montado no próprio navegador: junta PDF, Excel e DXF num único arquivo.
+var CRC_T = null;
+function crc32(u8){
+  if (!CRC_T) { CRC_T = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_T[n] = c >>> 0; } }
+  var x = 0xFFFFFFFF; for (var i = 0; i < u8.length; i++) x = CRC_T[(x ^ u8[i]) & 255] ^ (x >>> 8);
+  return (x ^ 0xFFFFFFFF) >>> 0;
+}
+function montaZip(arqs){
+  var enc = new TextEncoder(), partes = [], central = [], off = 0, d = new Date();
+  var dt = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dd = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  arqs.forEach(function(a){
+    var nome = enc.encode(a.nome), crc = crc32(a.dados), n = a.dados.length;
+    var h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(10, dt, true); h.setUint16(12, dd, true);
+    h.setUint32(14, crc, true); h.setUint32(18, n, true); h.setUint32(22, n, true); h.setUint16(26, nome.length, true);
+    partes.push(new Uint8Array(h.buffer), nome, a.dados);
+    var c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(12, dt, true); c.setUint16(14, dd, true);
+    c.setUint32(16, crc, true); c.setUint32(20, n, true); c.setUint32(24, n, true); c.setUint16(28, nome.length, true); c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), nome);
+    off += 30 + nome.length + n;
+  });
+  var tam = 0; central.forEach(function(p){ tam += p.length; });
+  var e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, arqs.length, true); e.setUint16(10, arqs.length, true); e.setUint32(12, tam, true); e.setUint32(16, off, true);
+  return new Blob(partes.concat(central, [new Uint8Array(e.buffer)]), { type: 'application/zip' });
+}
+// Botão "Todos os formatos": gera PDF, Excel e DXF e entrega tudo num ZIP.
+async function exportaTodos(){
+  if (Object.keys(S.edits).length && confirm('Há alterações não salvas. Salvar antes de exportar?')) await salvaResumoSilencioso();
+  var arqs = [], base = '';
+  var fmts = [['pdf', 'PDF'], ['xlsx', 'Excel'], ['dxf', 'DXF']];
+  for (var i = 0; i < fmts.length; i++) {
+    toast('Gerando ' + fmts[i][1] + ' (' + (i + 1) + ' de 3)...');
+    var r = await chamar('exportarResumo', S.obra.id, fmts[i][0]);
+    var bin = atob(r.base64), u8 = new Uint8Array(bin.length);
+    for (var k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+    arqs.push({ nome: r.nomeArquivo, dados: u8 });
+    if (!base) base = r.nomeArquivo.replace(/\.[^.]+$/, '');
+  }
+  var a = document.createElement('a'); a.href = URL.createObjectURL(montaZip(arqs)); a.download = base + '.zip';
+  document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast('Arquivo gerado: ' + base + '.zip (PDF, Excel e DXF)');
+}
+function menuExporta(){
+  modal('<h3>Exportar</h3><div class="dica" style="margin-bottom:12px">Escolha o formato do arquivo.</div><div style="display:flex;flex-direction:column;gap:8px"><button class="acao" onclick="fechaModal();exportaTodos()">Todos os formatos - ZIP com PDF, Excel e DXF</button><button class="acao secundaria" onclick="fechaModal();exporta(\'pdf\')">PDF - tabela Resumo</button><button class="acao secundaria" onclick="fechaModal();exporta(\'xlsx\')">Excel - editável, com os cálculos</button><button class="acao secundaria" onclick="fechaModal();exporta(\'dxf\')">DXF - tabelas por pavimento para o AutoCAD</button></div><div class="barra" style="margin:14px 0 0"><div class="esp"></div><button class="acao secundaria" onclick="fechaModal()">Cancelar</button></div>');
+}
+/* ---------- IMPORTAR AMBIENTES DAS PRANCHAS (PDF) ---------- */
+function pdfNum(s){ return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0; }
+function base2(n){ return (n < 10 ? '0' : '') + n; }
+function escolheArquivosPBA(){
+  var f = $('arq-pba'); if (!f) { f = document.createElement('input'); f.type = 'file'; f.id = 'arq-pba'; f.accept = '.pdf,application/pdf'; f.multiple = true; f.hidden = true; f.onchange = function(){ importaPBA(f.files); }; document.body.appendChild(f); }
+  f.value = ''; f.click();
+}
+async function importaPBA(files){
+  if (!files || !files.length) return;
+  if (!window.pdfjsLib) return toast('O leitor de PDF ainda está carregando (ou sem internet). Aguarde alguns segundos e tente de novo.', true);
+  busy(true);
+  try {
+    await carregaListas();
+    var lidos = [], vistos = {}, arqs = [];
+    for (var i = 0; i < files.length; i++) {
+      var r = await LeitorPBA.lerPDF(window.pdfjsLib, new Uint8Array(await files[i].arrayBuffer()));
+      var cls = LeitorPBA.classificar(r.ambientes, S.listaAmb), n = 0;
+      cls.forEach(function(x){
+        var k = [x.pav, x.prancha, x.num, x.area].join('|');
+        if (vistos[k]) return; vistos[k] = 1; lidos.push(x); n++;
+      });
+      arqs.push({ nome: files[i].name, qtd: n });
+    }
+    busy(false);
+    if (!lidos.length) return toast('Não encontrei ambientes nesses PDFs. Confira se são as plantas baixas do PBA.', true);
+    montaImportacao(lidos, arqs);
+  } catch (e) { busy(false); toast('Não consegui ler o PDF: ' + e.message, true); }
+}
+// Monta a lista da revisão: marca os que já existem na obra, define o nome com numeração e a sugestão de AC.
+function montaImportacao(lidos, arqs){
+  var ex = S.itens.map(function(it){ return { pav: it.a.pav, nome: it.a.nome, piso: it.a.piso, usado: false }; });
+  lidos = lidos.map(function(x, i){ x.ord = i; return x; }).sort(function(a, b){ return String(a.pav).localeCompare(String(b.pav), 'pt', { numeric: true }) || a.ord - b.ord; });
+  var itens = lidos.map(function(x){
+    var it = { pav: x.pav, base: x.base, num: x.num, area: pdfNum(x.area), pts: x.pts || '', ac: x.ac, prancha: x.prancha, numerado: x.numerado, padrao: x.padrao, dup: false, marca: false, nome: '' };
+    ex.forEach(function(e){
+      if (it.dup || e.usado || e.pav !== it.pav || Math.abs(e.piso - it.area) > 0.005) return;
+      if (e.nome === it.base || e.nome.indexOf(it.base + ' ') === 0) { e.usado = true; it.dup = true; }
+    });
+    return it;
+  });
+  itens.forEach(function(x){ x.nome = x.num ? x.base + ' ' + x.num : x.base; });
+  itens.forEach(function(x){ if (x.dup) x.nome = x.base; x.marca = !x.dup && x.ac === true; });
+  S.imp = { itens: itens, arqs: arqs }; S.tela = 'importar'; renderImp();
+}
+function renderImp(){
+  var I = S.imp.itens, o = S.obra;
+  var sel = I.filter(function(x){ return x.marca; }).length, dup = I.filter(function(x){ return x.dup; }).length, nao = I.filter(function(x){ return !x.padrao; }).length;
+  var h = '<div class="barra"><div><h2>Importar ambientes das pranchas</h2><div class="sub" style="margin:0">' + esc(o.nome) + ' · ' + S.imp.arqs.length + ' PDF(s) lido(s) · ' + I.length + ' ambientes encontrados</div></div><div class="esp"></div><button class="acao secundaria" onclick="cancelaImp()">Cancelar</button><button class="acao" onclick="confirmaImp()">Importar selecionados (<span id="imp-n">' + sel + '</span>)</button></div>';
+  h += '<div class="card"><div class="dica" style="font-size:12px;margin:0">Vêm marcados os ambientes com ponto de ar-condicionado (AC) na prancha. Confira o nome (a numeração entra no nome), a área e a coluna AC. Quem tem AC = Sim recebe o próximo número de AC analisado. As janelas e cargas são preenchidas depois, ambiente por ambiente.' +
+    (dup ? '<br>' + dup + ' ambiente(s) já cadastrado(s) nesta obra (mesmo pavimento e área) aparecem desmarcados.' : '') +
+    '<br>Nomes e áreas como estão nas pranchas (abreviaturas expandidas, número da prancha no nome).' + '</div>' +
+    '<div style="margin-top:8px"><button class="acao sm secundaria" onclick="impMarcar(\'ac\')">Marcar todos com AC</button> <button class="acao sm secundaria" onclick="impMarcar(\'todos\')">Marcar todos</button> <button class="acao sm secundaria" onclick="impMarcar(\'nenhum\')">Desmarcar todos</button></div></div><div style="height:10px"></div>';
+  h += '<div class="tw"><table class="tbl resp"><tr><th></th><th>Ambiente</th><th>Área (m²)</th><th>Pontos na prancha</th><th>AC</th></tr>';
+  var pav = null;
+  I.forEach(function(x, i){
+    if (x.pav !== pav) { pav = x.pav; h += '<tr class="pav"><td colspan="5">' + esc(pav) + '</td></tr>'; }
+    h += '<tr class="lin"><td class="c"><input type="checkbox" ' + (x.marca ? 'checked ' : '') + (x.dup ? 'disabled ' : '') + 'onchange="impSet(' + i + ',\'marca\',this.checked)"></td>' +
+      '<td data-l="Ambiente"><input value="' + esc(x.nome) + '" ' + (x.dup ? 'disabled ' : '') + 'onchange="impSet(' + i + ',\'nome\',this.value)">' + (x.dup ? ' <span class="tag ok">já cadastrado</span>' : '') + '</td>' +
+      '<td data-l="Área (m²)"><input style="max-width:90px" inputmode="decimal" value="' + esc(fmt(x.area, 2)) + '" ' + (x.dup ? 'disabled ' : '') + 'onchange="impSet(' + i + ',\'area\',this.value)"></td>' +
+      '<td data-l="Pontos" class="dica" style="font-size:12px">' + (x.pts ? esc(x.pts) : 'sem indicação') + '</td>' +
+      '<td class="c" data-l="AC"><select ' + (x.dup ? 'disabled ' : '') + 'onchange="impSet(' + i + ',\'ac\',this.value)"><option value="S"' + (x.ac === true ? ' selected' : '') + '>Sim</option><option value="N"' + (x.ac !== true ? ' selected' : '') + '>Não</option></select></td></tr>';
+  });
+  $('main').innerHTML = h + '</table></div>';
+}
+function impAtualizaN(){ var n = S.imp.itens.filter(function(x){ return x.marca; }).length; var e = $('imp-n'); if (e) e.textContent = n; }
+function impSet(i, k, v){
+  var x = S.imp.itens[i];
+  if (k === 'marca') x.marca = !!v;
+  else if (k === 'nome') x.nome = String(v).trim();
+  else if (k === 'area') x.area = pdfNum(v);
+  else if (k === 'ac') { x.ac = v === 'S'; if (x.ac && !x.dup) x.marca = true; renderImp(); return; }
+  impAtualizaN();
+}
+function impMarcar(modo){
+  S.imp.itens.forEach(function(x){ if (x.dup) return; x.marca = modo === 'todos' ? true : (modo === 'ac' ? x.ac === true : false); });
+  renderImp();
+}
+function cancelaImp(){ S.imp = null; abrirObra(S.obra.id, 'ambientes'); }
+async function confirmaImp(){
+  var l = S.imp.itens.filter(function(x){ return x.marca && !x.dup; });
+  if (!l.length) return toast('Marque pelo menos um ambiente.', true);
+  if (l.some(function(x){ return !x.nome; })) return toast('Há ambiente sem nome.', true);
+  if (!confirm('Importar ' + l.length + ' ambiente(s) para ' + S.obra.nome + '?')) return;
+  var r = await chamar('importarAmbientes', S.obra.id, l.map(function(x){ return { pav: x.pav, nome: x.nome, area: x.area, ac: x.ac === true }; }));
+  S.imp = null;
+  toast(r.criados + ' ambiente(s) importado(s)' + (r.ignorados ? ' · ' + r.ignorados + ' já existiam e foram ignorados' : '') + '.');
+  await abrirObra(S.obra.id, 'ambientes');
+}
+
+/* ---------- AMBIENTE (formulário) ---------- */
+function ambVazio(){
+  return { id: null, pav: '', nome: '', acAnalisado: S.proximoAC, previsto: '', adotado: '', tubPlanta: '', obs: '',
+    jan: ORIENT.map(function(){ return { a: 0, v: 'T', p: 'I' }; }), parExtSul: 0, parExtOutra: 0, parInt: 0, parExtSulM: '', parExtOutraM: '', parIntM: '', piso: 0, teto: [], pess: [0, 0, 0], aparelhos: [{ nome: '', q: 1, w: 0 }], ilum: [{ l: 0, n: 0, w: 0 }], portas: 0 };
+}
+async function carregaListas(){
+  var r = await Promise.all([api('listarNomesAmbientes'), api('listarAparelhos')]);
+  S.listaAmb = r[0].lista; S.aparelhos = r[1].aparelhos;
+}
+async function novoAmb(){ busy(true); try { await carregaListas(); } catch (e) { toast(e.message, true); } busy(false); S.amb = ambVazio(); S.baseAmb = ''; S.compl = ''; S.tela = 'ambiente'; renderAmb(); }
+async function editaAmb(id){
+  var it = S.itens.filter(function(x){ return x.a.id === id; })[0];
+  if (!it) { await abrirObra(S.obra.id); return editaAmb(id); }
+  busy(true); try { await carregaListas(); } catch (e) { toast(e.message, true); } busy(false);
+  S.amb = JSON.parse(JSON.stringify(it.a)); S.tela = 'ambiente';
+  if (!S.amb.teto) S.amb.teto = []; if (!S.amb.aparelhos) S.amb.aparelhos = []; if (!S.amb.ilum) S.amb.ilum = [];
+  if (!S.amb.aparelhos.length) S.amb.aparelhos.push({ nome: '', q: 1, w: 0 });
+  if (!S.amb.ilum.length) S.amb.ilum.push({ l: 0, n: 0, w: 0 });
+  ['parExtSulM', 'parExtOutraM', 'parIntM'].forEach(function(k){ if (S.amb[k] == null) S.amb[k] = ''; });
+  var nm = S.amb.nome, melhor = null;
+  S.listaAmb.forEach(function(b){ if ((nm === b.nome || nm.indexOf(b.nome + ' ') === 0) && (!melhor || b.nome.length > melhor.nome.length)) melhor = b; });
+  if (melhor) { S.baseAmb = melhor.nome; S.compl = nm.slice(melhor.nome.length).trim(); } else { S.baseAmb = nm ? '__outro__' : ''; S.compl = ''; S.outro = nm; }
+  renderAmb();
+}
+function I(path, v, ph){ return '<input data-k="' + path + '" data-t="n" data-dec="2" inputmode="decimal" value="' + nv2(v) + '" placeholder="' + esc(ph || '0,00') + '">'; }
+function Ii(path, v, ph){ return '<input data-k="' + path + '" data-t="n" inputmode="numeric" value="' + nv(v) + '" placeholder="' + esc(ph || '0') + '">'; }
+function F(label, ctl, cls){ return '<div class="campo ' + (cls || '') + '"><label>' + label + '</label>' + ctl + '</div>'; }
+function optsAmb(){
+  var grupos = {}, ordem = [];
+  S.listaAmb.forEach(function(b){ var g = b.grupo || 'Outros'; if (!grupos[g]) { grupos[g] = []; ordem.push(g); } grupos[g].push(b); });
+  return '<option value="">Selecione...</option>' + ordem.map(function(g){ return '<optgroup label="' + esc(g) + '">' + grupos[g].map(function(b){ return '<option value="' + esc(b.nome) + '"' + (S.baseAmb === b.nome ? ' selected' : '') + '>' + esc(b.nome) + '</option>'; }).join('') + '</optgroup>'; }).join('') +
+    '<option value="__outro__"' + (S.baseAmb === '__outro__' ? ' selected' : '') + '>+ outro ambiente...</option>';
+}
+function modoTeto(a){ var t = a.teto || []; return t.length > 1 ? 'misto' : (t.length === 1 ? t[0].t : ''); }
+function htmlTeto(a){
+  var m = modoTeto(a);
+  var h = '<div class="grid"><div class="campo c2"><label>Tipo de teto (a área é a do piso)</label><select id="teto_modo"><option value="">Selecione...</option>' +
+    TETOS.map(function(t){ return '<option value="' + t[0] + '"' + (m === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') +
+    '<option value="misto"' + (m === 'misto' ? ' selected' : '') + '>Tipos mistos (dividir a área)</option></select></div></div>';
+  if (m === 'misto') {
+    h += '<div style="margin-top:8px">' + a.teto.map(function(x, i){
+      return '<div class="linha-multi" style="grid-template-columns:2fr 1fr auto"><div class="campo"><select data-k="teto.' + i + '.t" data-t="t">' + TETOS.map(function(t){ return '<option value="' + t[0] + '"' + (x.t === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>' +
+        '<div class="campo">' + I('teto.' + i + '.a', x.a, 'área m²') + '</div><button class="acao sm perigo" onclick="delTeto(' + i + ')">Remover</button></div>';
+    }).join('') + '<button class="acao sm secundaria" onclick="addTeto()">+ tipo de teto</button><div class="dica" id="teto_soma"></div></div>';
+  }
+  return h;
+}
+function htmlAparelhos(a){
+  var h = a.aparelhos.map(function(x, i){
+    return '<div class="linha-multi" style="grid-template-columns:2fr 1fr 1fr auto"><div class="campo"><label>Aparelho</label><select data-k="aparelhos.' + i + '.nome" data-t="ap"><option value="">Selecione...</option>' +
+      S.aparelhos.map(function(p){ return '<option value="' + esc(p.nome) + '"' + (x.nome === p.nome ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="campo"><label>Quantidade</label>' + Ii('aparelhos.' + i + '.q', x.q, '1') + '</div><div class="campo"><label>Potência (W)</label>' + I('aparelhos.' + i + '.w', x.w) + '</div>' +
+      '<button class="acao sm perigo" onclick="delAp(' + i + ')">Remover</button></div>';
+  }).join('');
+  return h + '<button class="acao sm secundaria" onclick="addAp()">+ linha</button> <button class="acao sm" onclick="formAparelho()">+ aparelho (cadastrar novo)</button>';
+}
+function htmlIlum(a){
+  var h = a.ilum.map(function(x, i){
+    return '<div class="linha-multi" style="grid-template-columns:repeat(3,1fr) 1fr auto"><div class="campo"><label>nº de luminárias</label>' + Ii('ilum.' + i + '.l', x.l, '0') + '</div>' +
+      '<div class="campo"><label>nº de lâmpadas por luminária</label>' + Ii('ilum.' + i + '.n', x.n, '0') + '</div><div class="campo"><label>potência por lâmpada (W)</label>' + I('ilum.' + i + '.w', x.w, '0') + '</div>' +
+      '<div class="campo"><label>Subtotal (W)</label><input readonly id="il_sub_' + i + '" value="' + fmt(pn(x.l) * pn(x.n) * pn(x.w), 2) + '"></div><button class="acao sm perigo" onclick="delIl(' + i + ')">Remover</button></div>';
+  }).join('');
+  return h + '<button class="acao sm secundaria" onclick="addIl()">+ linha de iluminação</button>';
+}
+function optsPav(atual){
+  var n = (S.obra && S.obra.numPav) || 0, l = [];
+  for (var i = 1; i <= n; i++) l.push('Pavimento ' + (i < 10 ? '0' : '') + i);
+  if (atual && l.indexOf(atual) < 0) l.push(atual);
+  return '<option value="">Selecione...</option>' + l.map(function(p){ return '<option value="' + esc(p) + '"' + (p === atual ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('');
+}
+function renderAmb(){
+  var a = S.amb, o = S.obra;
+  var pavs = {}; S.itens.forEach(function(it){ pavs[it.a.pav] = 1; });
+  var h = '<div class="barra cmp nw"><div><h2>' + (a.id ? 'Editar ambiente' : 'Novo ambiente') + '</h2><div class="sub" style="margin:0">' + esc(o.nome) + ' · ' + esc(o.revisao) + '</div></div><div class="esp"></div><button class="acao secundaria" onclick="cancelaAmb()">Cancelar</button><button class="acao" onclick="salvaAmb()">Salvar</button></div>';
+  h += '<div class="ed"><div>';
+  h += '<datalist id="lpav">' + Object.keys(pavs).map(function(p){ return '<option value="' + esc(p) + '">'; }).join('') + '</datalist>';
+  h += '<div class="card"><h3>Identificação</h3><div class="grid">' +
+    F('Pavimento', '<select data-k="pav" data-t="t">' + optsPav(a.pav) + '</select>') +
+    F('Ambiente (lista)', '<select id="amb_base">' + optsAmb() + '</select>', 'c2') +
+    F('Complemento / nº do ambiente', '<input id="amb_compl" value="' + esc(S.compl) + '" placeholder="Ex.: 01">') +
+    '<div class="campo c2" id="box_outro"' + (S.baseAmb === '__outro__' ? '' : ' hidden') + '><label>Nome do outro ambiente</label><input id="amb_outro" value="' + esc(S.outro || '') + '" placeholder="Digite o nome"></div>' +
+    F('AC analisado (nº, ex.: 4 ou 4a)', '<input data-k="acAnalisado" data-t="t" value="' + esc(a.acAnalisado) + '" placeholder="Ex.: 4 ou 4a">') +
+    F('Previsto em projeto REV 00 (BTU)', '<select data-k="previsto" data-t="n">' + optEquip(a.previsto, 'sem previsão') + '</select>') +
+    F('Aparelho adotado (BTU)', '<select data-k="adotado" data-t="n">' + optEquip(a.adotado, 'pendente') + '</select>') +
+    F('Comprimento da tubulação frigorífera em planta (m)', I('tubPlanta', a.tubPlanta, 'pendente')) +
+    '</div><div class="dica">Ambiente novo na lista? Escolha "+ outro ambiente". Previsto em branco = sem previsão (o app sugere). Aparelho adotado e comprimento da tubulação podem ficar pendentes até o fim do projeto.</div></div>';
+  h += '<div class="card"><h3>1 e 2 · Janelas (insolação e transmissão)</h3><div class="tw"><table class="tbl resp"><tr><th>Orientação</th><th>Área (m²)</th><th>Vidro</th><th>Proteção</th></tr>' +
+    ORIENT.map(function(or, i){ var j = a.jan[i]; return '<tr><td data-l="Orientação"><b>' + or[1] + '</b></td><td data-l="Área (m²)">' + I('jan.' + i + '.a', j.a) + '</td><td data-l="Vidro"><select data-k="jan.' + i + '.v" data-t="t"><option value="C"' + (j.v === 'C' ? ' selected' : '') + '>Vidro comum</option><option value="T"' + (j.v === 'T' ? ' selected' : '') + '>Vidro laminado / temperado</option></select></td><td data-l="Proteção"><select data-k="jan.' + i + '.p" data-t="t"><option value="S"' + (j.p === 'S' ? ' selected' : '') + '>Sem proteção</option><option value="I"' + (j.p === 'I' ? ' selected' : '') + '>Com proteção interna</option><option value="E"' + (j.p === 'E' ? ' selected' : '') + '>Com proteção externa</option></select></td></tr>'; }).join('') +
+    '</table></div></div>';
+  var pe = (o && o.pdEst) || 0, legado = (a.parExtSul || a.parExtOutra || a.parInt) && a.parExtSulM === '' && a.parExtOutraM === '' && a.parIntM === '';
+  h += '<div class="card"><h3>3 · Paredes</h3><div class="grid">' +
+    F('Externas - orientação sul: comprimento (m)', I('parExtSulM', a.parExtSulM) + '<div class="parea" id="pa_sul"></div>') + F('Externas - outra orientação: comprimento (m)', I('parExtOutraM', a.parExtOutraM) + '<div class="parea" id="pa_outra"></div>') + F('Internas: comprimento (m)', I('parIntM', a.parIntM) + '<div class="parea" id="pa_int"></div>') + '</div>' +
+    '<div class="dica">A área é calculada: comprimento x pé-direito estrutural da obra (' + (pe > 0 ? fmt(pe, 2) + ' m' : '<b style="color:var(--er)">não informado - use Editar obra</b>') + '), sem descontar janelas e portas.' + (legado ? ' <b>Este ambiente tem áreas digitadas na versão anterior (sul ' + fmt(a.parExtSul, 2) + ' / outra ' + fmt(a.parExtOutra, 2) + ' / internas ' + fmt(a.parInt, 2) + ' m²); informe os comprimentos para recalcular.</b>' : '') + '</div></div>';
+  h += '<div class="card"><h3>4 e 5 · Piso e teto</h3><div class="grid">' + F('Área do piso (m²) — o teto repete esta área', I('piso', a.piso), 'c2') + '</div><div style="margin-top:10px" id="box_teto">' + htmlTeto(a) + '</div><div class="dica">O piso usa o mesmo fator em todos os casos (inclusive sobre o solo).</div></div>';
+  h += '<div class="card"><h3>6 · Pessoas</h3><div class="grid">' + F('Atividade normal', Ii('pess.0', a.pess[0])) + F('Repouso', Ii('pess.1', a.pess[1])) + F('Atividade forte', Ii('pess.2', a.pess[2])) + '</div></div>';
+  h += '<div class="card"><h3>7 · Aparelhos</h3><div id="box_ap">' + htmlAparelhos(a) + '</div><div class="totw" id="tot_ap"></div></div>';
+  h += '<div class="card"><h3>7 · Iluminação</h3><div id="box_il">' + htmlIlum(a) + '</div><div class="totw" id="tot_il"></div></div>';
+  h += '<div class="card"><h3>8 · Portas abertas</h3><div class="grid">' + F('Portas / vãos abertos p/ áreas não condicionadas (m²)', I('portas', a.portas), 'c2') + '</div></div>';
+  h += '<div class="card"><h3>Observações</h3><textarea data-k="obs" data-t="t" rows="2">' + esc(a.obs) + '</textarea></div>';
+  h += '</div><div class="prev card" id="prev">Calculando...</div></div>';
+  $('main').innerHTML = h; window.scrollTo(0, 0); atualizaTotais(); agendaPrev(50);
+}
+function atualizaTotais(){
+  if (!S.amb) return;
+  var ta = S.amb.aparelhos.reduce(function(s, x){ return s + pn(x.q) * pn(x.w); }, 0);
+  var ti = S.amb.ilum.reduce(function(s, x){ return s + pn(x.l) * pn(x.n) * pn(x.w); }, 0);
+  var a = $('tot_ap'), b = $('tot_il');
+  if (a) a.innerHTML = '<b>Total dos aparelhos: ' + fmt(ta, 2) + ' W</b>';
+  if (b) b.innerHTML = '<b>Total da iluminação: ' + fmt(ti, 2) + ' W</b>';
+}
+function cancelaAmb(){ if (confirm('Sair sem salvar as alterações deste ambiente?')) abrirObra(S.obra.id, 'ambientes'); }
+function setPath(obj, path, val){ var p = path.split('.'), o = obj; for (var i = 0; i < p.length - 1; i++) o = o[p[i]]; o[p[p.length - 1]] = val; }
+function nomeFinal(){
+  var base = S.baseAmb === '__outro__' ? ($('amb_outro') ? $('amb_outro').value.trim() : '') : S.baseAmb;
+  return (base + (S.compl ? ' ' + S.compl : '')).trim();
+}
+function sugereCompl(){
+  var b = S.listaAmb.filter(function(x){ return x.nome === S.baseAmb; })[0];
+  if (!b || !b.numerado || S.compl || (S.amb && S.amb.id)) return;
+  var n = S.itens.filter(function(it){ return it.a.nome === b.nome || it.a.nome.indexOf(b.nome + ' ') === 0; }).length + 1;
+  S.compl = (n < 10 ? '0' : '') + n; var c = $('amb_compl'); if (c) c.value = S.compl;
+}
+function aoDigitar(e){
+  var el = e.target;
+  if (e.type === 'change' && el.getAttribute && el.getAttribute('data-dec')) el.value = f2(el.value);
+  if (el.getAttribute && el.getAttribute('data-id') && el.getAttribute('data-f')) { var id = el.getAttribute('data-id'), f = el.getAttribute('data-f'); S.edits[id] = S.edits[id] || {}; S.edits[id][f] = el.value; return; }
+  if (!S.amb || S.tela !== 'ambiente') return;
+  if (el.id === 'amb_base') { S.baseAmb = el.value; $('box_outro').hidden = S.baseAmb !== '__outro__'; if (S.baseAmb !== '__outro__') S.outro = ''; sugereCompl(); S.amb.nome = nomeFinal(); agendaPrev(600); return; }
+  if (el.id === 'amb_compl') { S.compl = el.value.trim(); S.amb.nome = nomeFinal(); return; }
+  if (el.id === 'amb_outro') { S.outro = el.value; S.amb.nome = nomeFinal(); return; }
+  if (el.id === 'teto_modo') { var m = el.value; if (m === '') S.amb.teto = []; else if (m === 'misto') { var ant = S.amb.teto.length === 1 ? S.amb.teto[0].t : 'laje_iso'; S.amb.teto = [{ t: ant, a: S.amb.piso || 0 }, { t: 'laje_exp', a: 0 }]; } else S.amb.teto = [{ t: m }]; $('box_teto').innerHTML = htmlTeto(S.amb); agendaPrev(300); return; }
+  var k = el.getAttribute && el.getAttribute('data-k');
+  if (!k) return;
+  var v = el.value, t = el.getAttribute('data-t');
+  if (t === 'n') v = (el.tagName === 'SELECT' && v === '') ? '' : (v === '' && el.tagName !== 'SELECT' ? 0 : pn(v));
+  if (k === 'tubPlanta' || /M$/.test(k)) v = el.value === '' ? '' : pn(el.value);
+  if (k === 'acAnalisado') { v = acNorm(el.value); if (el.value.trim() !== '' && v === '') toast('Informe o AC como número ou número com letra, ex.: 4 ou 4a.', true); }
+  setPath(S.amb, k, v);
+  if (t === 'ap') { var p = S.aparelhos.filter(function(x){ return x.nome === v; })[0]; var i = +k.split('.')[1]; if (p) { S.amb.aparelhos[i].w = p.w; if (!S.amb.aparelhos[i].q) S.amb.aparelhos[i].q = 1; $('box_ap').innerHTML = htmlAparelhos(S.amb); } }
+  var m2 = k.match(/^ilum\.(\d+)\./); if (m2) { var x = S.amb.ilum[+m2[1]], sub = $('il_sub_' + m2[1]); if (sub) sub.value = fmt(pn(x.l) * pn(x.n) * pn(x.w), 2); }
+  atualizaTotais(); agendaPrev(600);
+}
+function addTeto(){ S.amb.teto.push({ t: 'laje_iso', a: 0 }); $('box_teto').innerHTML = htmlTeto(S.amb); agendaPrev(300); }
+function delTeto(i){ S.amb.teto.splice(i, 1); $('box_teto').innerHTML = htmlTeto(S.amb); agendaPrev(300); }
+function addAp(){ S.amb.aparelhos.push({ nome: '', q: 1, w: 0 }); $('box_ap').innerHTML = htmlAparelhos(S.amb); atualizaTotais(); }
+function delAp(i){ S.amb.aparelhos.splice(i, 1); $('box_ap').innerHTML = htmlAparelhos(S.amb); atualizaTotais(); agendaPrev(300); }
+function addIl(){ S.amb.ilum.push({ l: 0, n: 0, w: 0 }); $('box_il').innerHTML = htmlIlum(S.amb); atualizaTotais(); }
+function delIl(i){ S.amb.ilum.splice(i, 1); $('box_il').innerHTML = htmlIlum(S.amb); atualizaTotais(); agendaPrev(300); }
+function formAparelho(){
+  modal('<h3>Cadastrar aparelho</h3><div class="grid" style="margin-bottom:10px"><div class="campo c2"><label>Nome do aparelho</label><input id="ap_nome" placeholder="Ex.: Computador"></div><div class="campo"><label>Potência (W)</label><input id="ap_w" data-dec="2" inputmode="decimal"></div></div><div class="dica">O aparelho fica disponível na lista para todas as obras.</div><div class="barra" style="margin:14px 0 0"><div class="esp"></div><button class="acao secundaria" onclick="fechaModal()">Cancelar</button><button class="acao" onclick="salvaAparelho()">Cadastrar</button></div>');
+}
+async function salvaAparelho(){
+  var r = await chamar('cadastrarAparelho', { nome: $('ap_nome').value, w: pn($('ap_w').value) });
+  S.aparelhos = r.aparelhos; fechaModal(); toast('Aparelho cadastrado.'); $('box_ap').innerHTML = htmlAparelhos(S.amb); atualizaTotais();
+}
+function agendaPrev(ms){
+  clearTimeout(tmrPrev); var meu = ++S.seq;
+  tmrPrev = setTimeout(function(){
+    if (!S.amb) return;
+    S.amb.nome = nomeFinal() || S.amb.nome;
+    api('calcularPrevia', S.obra.id, S.amb).then(function(r){ if (meu === S.seq && $('prev')) pintaPrev(r.c); }, function(e){ if ($('prev')) $('prev').innerHTML = '<span style="color:var(--er)">' + esc(e.message) + '</span>'; });
+  }, ms);
+}
+function pintaPrev(c){
+  var h = '<h3>Resultado</h3><div class="big">' + fmt(c.btu, 0) + ' <span style="font-size:14px">BTU/h</span></div><div class="dica">' + fmt(c.kcal, 0) + ' kcal/h · ' + fmt(c.kw, 2) + ' kW · ' + fmt(c.tr, 2) + ' TR</div>' +
+    '<div style="margin:10px 0"><b>Aparelho sugerido:</b> ' + (c.sug ? fmt(c.sug, 0) + ' BTU' : (c.acima ? '<span class="tag">acima do maior aparelho cadastrado</span>' : '—')) + '</div>';
+  if (c.alerta) h += '<div class="tag" style="margin-bottom:8px">⚠ O previsto em projeto é menor que o calculado</div>';
+  if (c.reduz) h += '<label class="tag rd" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;cursor:pointer"><input type="checkbox" ' + (S.amb && S.amb.reducao ? 'checked ' : '') + 'onchange="S.amb.reducao = this.checked"> Confirmar redução: previsto ' + fmt(S.amb ? pn(S.amb.previsto) : 0, 0) + ' → sugerido ' + fmt(c.sug, 0) + ' BTU</label>';
+  if (c.tetoDif) h += '<div class="tag" style="margin-bottom:8px">⚠ A soma das áreas de teto difere do piso em ' + fmt(c.tetoDif, 2) + ' m²</div>';
+  h += '<table>' + c.itens.map(function(i){ return '<tr><td>' + i.n + ' · ' + esc(i.t) + '</td><td>' + fmt(i.btu, 0) + '</td></tr>'; }).join('') +
+    '<tr><td><b>9 · Subtotal</b></td><td><b>' + fmt(c.subBtu, 0) + '</b></td></tr><tr><td>10 · Fator geográfico</td><td>' + fmt(c.fatGeo, 2) + '</td></tr></table>' +
+    '<div class="dica" style="margin-top:8px">Aparelhos: ' + fmt(c.eletrW, 0) + ' W · Iluminação: ' + fmt(c.ilumW, 0) + ' W<br>Tubulação: ' + (c.dimTotal == null ? '<b>pendente</b>' : 'total ' + fmt(c.dimTotal, 2) + ' m · com margem ' + fmt(c.dimMais, 2) + ' m') + ' (trecho vertical da obra: ' + fmt(c.trechoV, 2) + ' m)<br>Carga: ' + (c.w == null ? 'sem W cadastrado' : fmt(c.w, 0) + ' W') + '</div>' +
+    (c.pend.length ? '<div class="tag" style="margin-top:8px">Pendente: ' + esc(c.pend.join(', ')) + '</div>' : '<div class="tag ok" style="margin-top:8px">Ambiente completo</div>');
+  $('prev').innerHTML = h;
+  var pa = c.parAreas || {}, ps = { pa_sul: pa.sul, pa_outra: pa.outra, pa_int: pa.int };
+  Object.keys(ps).forEach(function(id){ var el = $(id); if (el) el.textContent = pa.porComprimento ? 'Área: ' + fmt(ps[id], 2) + ' m²' : ''; });
+  var pb = $('prevbar'); if (pb && S.tela === 'ambiente') { pb.hidden = false; pb.innerHTML = '<b>' + fmt(c.btu, 0) + ' BTU/h</b> · sugerido: ' + (c.sug ? fmt(c.sug, 0) + ' BTU' : '—'); }
+  var ts = $('teto_soma'); if (ts) ts.textContent = c.tetoDif ? 'A soma das áreas difere do piso em ' + fmt(c.tetoDif, 2) + ' m².' : 'A soma das áreas confere com o piso.';
+}
+async function salvaAmb(){
+  S.amb.nome = nomeFinal();
+  if (!S.amb.nome) return toast('Selecione ou informe o ambiente.', true);
+  S.amb.aparelhos = S.amb.aparelhos.filter(function(x){ return x.nome || pn(x.w) > 0; });
+  S.amb.ilum = S.amb.ilum.filter(function(x){ return pn(x.l) > 0 || pn(x.n) > 0 || pn(x.w) > 0; });
+  if (S.baseAmb === '__outro__') { try { await chamar('cadastrarAmbienteNovo', $('amb_outro').value); } catch (e) { return; } }
+  await chamar('salvarAmbiente', S.obra.id, S.amb); toast('Ambiente salvo.'); abrirObra(S.obra.id, 'ambientes');
+}
+
+/* ---------- PARÂMETROS ---------- */
+async function irParams(){
+  S.tela = 'params'; $('prevbar').hidden = true;
+  var r = await chamar('obterParametros'); S.params = r;
+  var grupos = {}, ordem = [];
+  r.coef.forEach(function(c){ if (!grupos[c.grupo]) { grupos[c.grupo] = []; ordem.push(c.grupo); } grupos[c.grupo].push(c); });
+  var h = '<div class="barra"><div><h2>Parâmetros</h2><div class="sub">Coeficientes de cálculo e aparelhos de ar-condicionado disponíveis. Valem para todas as obras. Alterações levam até 5 minutos para refletir em quem já está usando.</div></div><div class="esp"></div><button class="acao" onclick="salvaParams()">Salvar parâmetros</button></div>';
+  h += '<div class="card"><h3>Aparelhos de ar-condicionado (BTU) e potência elétrica (W)</h3><div class="tw"><table class="tbl resp" id="teq"><tr><th>BTU</th><th>Potência (W)</th><th>Usar na sugestão</th><th></th></tr>' +
+    r.equip.map(eqLinha).join('') + '</table></div><div style="margin-top:8px"><button class="acao sm" onclick="addEq()">+ Adicionar aparelho</button></div><div class="dica">Aparelhos sem potência (W) aparecem como "sem W" no resumo.</div></div>';
+  ordem.forEach(function(g){
+    h += '<div class="card"><h3>' + esc(g) + '</h3><div class="tw"><table class="tbl"><tr><th style="text-align:left">Coeficiente</th><th style="width:130px">Valor</th></tr>' +
+      grupos[g].map(function(c){ return '<tr><td>' + esc(c.desc) + '</td><td><input class="pc" data-ch="' + esc(c.chave) + '" value="' + nv(c.valor) + '" style="text-align:right"></td></tr>'; }).join('') + '</table></div></div>';
+  });
+  $('main').innerHTML = h;
+}
+function eqLinha(e){ return '<tr><td data-l="BTU"><input class="eb" value="' + nv(e.btu) + '" style="text-align:right"></td><td data-l="Potência (W)"><input class="ew" value="' + nv(e.w) + '" style="text-align:right"></td><td class="c" data-l="Usar na sugestão"><input type="checkbox" class="ea"' + (e.ativo ? ' checked' : '') + '></td><td class="c acoes"><button class="acao sm perigo" onclick="this.closest(\'tr\').remove()">Remover</button></td></tr>'; }
+function addEq(){ $('teq').insertAdjacentHTML('beforeend', eqLinha({ btu: '', w: '', ativo: true })); }
+async function salvaParams(){
+  var coef = [].map.call(document.querySelectorAll('.pc'), function(i){ return { chave: i.getAttribute('data-ch'), valor: pn(i.value) }; });
+  var equip = [].map.call(document.querySelectorAll('#teq tr'), function(tr){ var b = tr.querySelector('.eb'); if (!b) return null; return { btu: pn(b.value), w: tr.querySelector('.ew').value === '' ? '' : pn(tr.querySelector('.ew').value), ativo: tr.querySelector('.ea').checked }; }).filter(function(x){ return x && x.btu > 0; });
+  await chamar('salvarParametros', { coef: coef, equip: equip });
+  var e = await api('listarEquipamentos'); S.equip = e.equip; toast('Parâmetros salvos.'); irParams();
+}
+</script>
+</body>
+</html>
