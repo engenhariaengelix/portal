@@ -502,12 +502,14 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
     return SECOES.filter(function (s) { return s.id === empresaSel; })[0] || SECOES[0] || null;
   }
 
-  var ABRE_NO_APP = { controle: true };
+   var ABRE_NO_APP = { controle: true, memoriais: true, cargatermica: true, diario: true };
   var sisAberto = false;
+  var sisAtual = null;
 
-  function abrirNoApp(s, url) {
+  function abrirNoApp(s) {
+    sisAtual = s;
     $('sis-nome').textContent = s.nome;
-    $('sis-frame').src = url;
+    $('sis-frame').src = 'about:blank';
     $('tela-sistema').hidden = false;
     sisAberto = true;
     try { history.pushState({ sis: 1 }, ''); } catch (e) {}
@@ -516,6 +518,7 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
   function fecharSistema(daHistoria) {
     if (!sisAberto) return;
     sisAberto = false;
+    sisAtual = null;
     $('tela-sistema').hidden = true;
     $('sis-frame').src = 'about:blank';
     if (!daHistoria) { try { history.back(); } catch (e) {} }
@@ -527,13 +530,14 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
   function abrirSistema(s) {
     if (s.emConstrucao) { avisar(s.nome + ' ainda está em construção.'); return; }
     if (s.externo) { window.open(s.link, '_blank'); return; }
-    if (ABRE_NO_APP[s.id]) {
-      avisar('Abrindo ' + s.nome + '…');
-      api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
-        abrirNoApp(s, d.url);
-      }).catch(tratarErro);
-      return;
-    }
+    abrirNoApp(s);
+    api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
+      if (sisAberto && sisAtual === s) { $('sis-frame').src = d.url; }
+    }).catch(function (e) {
+      fecharSistema(false);
+      tratarErro(e);
+    });
+  }
     var w = window.open('', '_blank');
     avisar('Abrindo ' + s.nome + '…');
     api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
