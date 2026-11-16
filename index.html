@@ -147,7 +147,9 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
 .sis-nome{flex:1;min-width:0;font-size:16px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sis-quadro{flex:1;min-height:0;position:relative}
 .sis-carregando{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center;color:#4f5d6b;font-size:14px}
-#sis-frame{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+#tela-sistema.fora{visibility:hidden;pointer-events:none;z-index:-1}
+.sis-fr{position:absolute;top:0;left:0;width:100%;height:100%;border:0;visibility:hidden}
+.sis-fr.ativo{visibility:visible}
 </style>
 </head>
 <body>
@@ -252,14 +254,13 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
   </nav>
 </section>
   
-<div id="tela-sistema" hidden>
+<div id="tela-sistema" class="fora">
   <div class="sis-topo">
     <button type="button" class="sis-voltar" id="sis-voltar">‹ Voltar</button>
     <div class="sis-nome" id="sis-nome"></div>
   </div>
-  <div class="sis-quadro">
+  <div class="sis-quadro" id="sis-quadro">
     <div class="sis-carregando">Carregando…</div>
-    <iframe id="sis-frame" title="Sistema" allow="clipboard-write"></iframe>
   </div>
 </div>
   
@@ -503,14 +504,92 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
   }
 
    var ABRE_NO_APP = { controle: true, memoriais: true, cargatermica: true, diario: true };
+  var PRE_SISTEMAS = ['controle'];
+  var PRE_VALIDADE = 10 * 60 * 1000;
   var sisAberto = false;
   var sisAtual = null;
+  var FR = {};
+  var preIniciada = false;
+
+  function acharSistema(id) {
+    var r = null;
+    SECOES.forEach(function (sec) {
+      (sec.sistemas || []).forEach(function (s) { if (s.id === id) r = s; });
+    });
+    return r;
+  }
+
+  function criarFrame(s) {
+    var f = document.createElement('iframe');
+    f.className = 'sis-fr';
+    f.title = s.nome;
+    f.setAttribute('allow', 'clipboard-write');
+    $('sis-quadro').appendChild(f);
+    FR[s.id] = { el: f, t: 0, url: '', pendente: null };
+    return FR[s.id];
+  }
+
+  function frameValido(o) {
+    return !!(o && o.url && (Date.now() - o.t) < PRE_VALIDADE);
+  }
+
+  function prepararFrame(s) {
+    var o = FR[s.id];
+    if (frameValido(o)) return Promise.resolve(o);
+    if (o && o.pendente) return o.pendente;
+    if (!o) o = criarFrame(s);
+    o.pendente = api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
+      o.url = d.url;
+      o.t = Date.now();
+      o.pendente = null;
+      o.el.src = d.url;
+      return o;
+    }).catch(function (e) {
+      o.pendente = null;
+      throw e;
+    });
+    return o.pendente;
+  }
+
+  function mostrarFrame(o) {
+    Object.keys(FR).forEach(function (k) { FR[k].el.classList.remove('ativo'); });
+    o.el.classList.add('ativo');
+  }
+
+  function limparFrames() {
+    Object.keys(FR).forEach(function (k) {
+      if (FR[k].el.parentNode) FR[k].el.parentNode.removeChild(FR[k].el);
+    });
+    FR = {};
+    preIniciada = false;
+  }
+
+  function preCarregar() {
+    if (!TOKEN || sisAberto) return;
+    PRE_SISTEMAS.forEach(function (id, i) {
+      setTimeout(function () {
+        var s = acharSistema(id);
+        if (!s || s.externo || s.emConstrucao || !TOKEN || sisAberto) return;
+        prepararFrame(s).catch(function () {});
+      }, i * 4000);
+    });
+  }
+
+  function iniciarPreCarga() {
+    if (preIniciada) return;
+    preIniciada = true;
+    setTimeout(preCarregar, 800);
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && preIniciada) preCarregar();
+  });
 
   function abrirNoApp(s) {
     sisAtual = s;
     $('sis-nome').textContent = s.nome;
-    $('sis-frame').src = 'about:blank';
-    $('tela-sistema').hidden = false;
+    Object.keys(FR).forEach(function (k) { FR[k].el.classList.remove('ativo'); });
+    $('tela-sistema').classList.remove('fora');
     sisAberto = true;
     try { history.pushState({ sis: 1 }, ''); } catch (e) {}
   }
@@ -519,8 +598,8 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
     if (!sisAberto) return;
     sisAberto = false;
     sisAtual = null;
-    $('tela-sistema').hidden = true;
-    $('sis-frame').src = 'about:blank';
+    $('tela-sistema').classList.add('fora');
+    Object.keys(FR).forEach(function (k) { FR[k].el.classList.remove('ativo'); });
     if (!daHistoria) { try { history.back(); } catch (e) {} }
   }
 
@@ -531,8 +610,10 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
     if (s.emConstrucao) { avisar(s.nome + ' ainda está em construção.'); return; }
     if (s.externo) { window.open(s.link, '_blank'); return; }
     abrirNoApp(s);
-    api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
-      if (sisAberto && sisAtual === s) { $('sis-frame').src = d.url; }
+    var o = FR[s.id];
+    if (frameValido(o)) { mostrarFrame(o); return; }
+    prepararFrame(s).then(function (o2) {
+      if (sisAberto && sisAtual === s) mostrarFrame(o2);
     }).catch(function (e) {
       fecharSistema(false);
       tratarErro(e);
@@ -856,10 +937,12 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
     if (!manterAba) irPara('inicio');
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
+    iniciarPreCarga();
   }
 
   function sairLocal(msg) {
     TOKEN = '';
+    limparFrames();
     apagar(CHAVE);
     apagar(CHAVE_CACHE);
     apagar(CHAVE_TAREFAS);
