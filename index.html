@@ -107,6 +107,20 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
 .det small{font-size:12px;color:#4f5d6b}
 .det span{font-size:15px;color:#222;line-height:1.35;white-space:pre-wrap}
 
+/* SENHA (alterar / esqueci) */
+#folha-senha{position:fixed;top:0;right:0;bottom:0;left:0;z-index:60;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
+#folha-senha .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px;max-height:90dvh;overflow:auto}
+#folha-senha h2{margin:0 0 4px;font-size:18px;color:#1f3a5f}
+#folha-senha label{display:block;margin-top:10px;font-size:13px;color:#4f5d6b}
+#folha-senha input{width:100%;min-height:46px;border:1px solid #c4ccd6;border-radius:8px;padding:0 12px;font-size:16px;margin-top:4px;background:#fff;color:#222}
+.sn-msg{font-size:14px;color:#4f5d6b;line-height:1.4}
+.sn-erro{color:#b3261e;font-size:14px;margin:8px 0 0}
+.sn-botoes{display:flex;gap:10px;margin-top:14px}
+.sn-botoes button{flex:1;min-height:46px;border-radius:10px;font-size:16px;font-weight:bold;border:1px solid #1f3a5f}
+#sn-salvar{background:#1f3a5f;color:#fff}
+#sn-cancelar{background:#fff;color:#1f3a5f}
+@media (min-width:900px){#folha-senha{align-items:center}#folha-senha .conteudo{border-radius:16px}}
+
 /* PC (TELA LARGA) */
 @media (min-width:900px){
   .cel{display:none!important}
@@ -182,6 +196,7 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
     <p class="erro" id="erro" hidden></p>
     <button class="entrar" type="submit" id="btn-entrar">Entrar</button>
     <button type="button" class="link-cliente" id="sou-cliente">Sou cliente</button>
+    <button type="button" class="link-cliente" id="esqueci">Esqueci minha senha</button>
     <p class="nota">Você fica conectado neste aparelho até tocar em "Sair".</p>
   </form>
 </section>
@@ -234,6 +249,7 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
     <div class="painel perfil" id="painel-perfil" hidden>
       <div class="avatar" id="avatar"></div>
       <h2 id="nome-perfil"></h2>
+      <button class="sair" id="alterar-senha-cel" type="button" style="background:#fff;color:#1f3a5f;border:1px solid #1f3a5f;margin-bottom:10px">Alterar senha</button>
       <button class="sair" id="sair" type="button">Sair</button>
     </div>
   </main>
@@ -264,6 +280,30 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
   </div>
 </div>
   
+<div id="folha-senha" hidden>
+  <form class="conteudo" id="form-senha" autocomplete="off">
+    <h2 id="senha-titulo">Alterar senha</h2>
+    <p class="sn-msg" id="sn-msg"></p>
+    <div id="sn-bloco-atual">
+      <label for="sn-atual">Senha atual</label>
+      <input id="sn-atual" type="password" autocomplete="current-password">
+    </div>
+    <div id="sn-bloco-codigo" hidden>
+      <label for="sn-codigo">Código recebido por e-mail</label>
+      <input id="sn-codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+    </div>
+    <label for="sn-nova">Nova senha (mínimo 4, sem espaços)</label>
+    <input id="sn-nova" type="password" autocomplete="new-password">
+    <label for="sn-nova2">Repita a nova senha</label>
+    <input id="sn-nova2" type="password" autocomplete="new-password">
+    <p class="sn-erro" id="sn-erro" hidden></p>
+    <div class="sn-botoes">
+      <button type="button" id="sn-cancelar">Cancelar</button>
+      <button type="submit" id="sn-salvar">Salvar</button>
+    </div>
+  </form>
+</div>
+
 <div id="folha-notif" hidden>
   <div class="conteudo">
     <h2>Notificações <span class="exemplo">(exemplos)</span></h2>
@@ -963,8 +1003,69 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
 
   $('sair').addEventListener('click', sair);
   $('sair-pc').addEventListener('click', sair);
-  $('alterar-senha').addEventListener('click', function () {
-    avisar('Em breve: alterar senha.');
+  /* ---------- SENHA (alterar / esqueci) ---------- */
+  var modoSenha = '';
+  var nomeRec = '';
+
+  function abrirSenha(modo, aviso) {
+    modoSenha = modo;
+    ['sn-atual', 'sn-codigo', 'sn-nova', 'sn-nova2'].forEach(function (id) { $(id).value = ''; });
+    $('sn-bloco-atual').hidden = (modo !== 'alterar');
+    $('sn-bloco-codigo').hidden = (modo !== 'recuperar');
+    $('senha-titulo').textContent = (modo === 'alterar') ? 'Alterar senha' : 'Nova senha';
+    $('sn-msg').textContent = aviso || '';
+    $('sn-erro').hidden = true;
+    $('sn-salvar').disabled = false;
+    $('folha-senha').hidden = false;
+  }
+
+  function fecharSenha() { $('folha-senha').hidden = true; }
+
+  function erroSenha(m) {
+    $('sn-erro').textContent = m;
+    $('sn-erro').hidden = false;
+  }
+
+  $('sn-cancelar').addEventListener('click', fecharSenha);
+  $('alterar-senha').addEventListener('click', function () { abrirSenha('alterar'); });
+  $('alterar-senha-cel').addEventListener('click', function () { abrirSenha('alterar'); });
+
+  $('form-senha').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var nova = $('sn-nova').value;
+    if (nova.length < 4) { erroSenha('A nova senha precisa ter pelo menos 4 caracteres.'); return; }
+    if (/\s/.test(nova)) { erroSenha('A senha não pode ter espaços.'); return; }
+    if (nova !== $('sn-nova2').value) { erroSenha('As duas senhas novas não são iguais.'); return; }
+    $('sn-salvar').disabled = true;
+    $('sn-erro').hidden = true;
+    var modo = modoSenha;
+    var corpo = (modo === 'alterar')
+      ? { acao: 'alterarSenha', token: TOKEN, senhaAtual: $('sn-atual').value, novaSenha: nova }
+      : { acao: 'redefinirSenha', nome: nomeRec, codigo: $('sn-codigo').value, novaSenha: nova };
+    api(corpo).then(function () {
+      fecharSenha();
+      if (modo === 'alterar') { avisar('Senha alterada com sucesso.'); }
+      else { $('senha').value = ''; avisar('Senha redefinida. Entre com a nova senha.'); }
+    }).catch(function (err) {
+      $('sn-salvar').disabled = false;
+      if (modo === 'alterar' && err && err.message === 'SESSAO_INVALIDA') { fecharSenha(); tratarErro(err); return; }
+      erroSenha(err && err.message ? err.message : 'Erro inesperado.');
+    });
+  });
+
+  $('esqueci').addEventListener('click', function () {
+    var nome = acharNome($('usuario').value);
+    if (modoCliente || !nome) { mostrarErroLogin('Digite seu usuário acima e toque em "Esqueci minha senha".'); return; }
+    $('esqueci').disabled = true;
+    api({ acao: 'esqueciSenha', nome: nome }).then(function (d) {
+      $('esqueci').disabled = false;
+      $('erro').hidden = true;
+      nomeRec = nome;
+      abrirSenha('recuperar', 'Enviamos um código de 6 números para ' + d.email + '. Ele vale por 10 minutos.');
+    }).catch(function (err) {
+      $('esqueci').disabled = false;
+      mostrarErroLogin(err && err.message ? err.message : 'Erro inesperado.');
+    });
   });
 
   $('sino').addEventListener('click', function () { $('folha-notif').hidden = false; });
