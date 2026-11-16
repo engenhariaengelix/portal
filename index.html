@@ -538,15 +538,6 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
       tratarErro(e);
     });
   }
-    var w = window.open('', '_blank');
-    avisar('Abrindo ' + s.nome + '…');
-    api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
-      if (w) { w.location.href = d.url; } else { location.href = d.url; }
-    }).catch(function (e) {
-      if (w) w.close();
-      tratarErro(e);
-    });
-  }
 
   function montarGrade() {
     var g = $('grade');
