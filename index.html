@@ -693,7 +693,7 @@ nav.abas button[hidden]{display:none!important}
     if (frameValido(o)) return Promise.resolve(o);
     if (o && o.pendente) return o.pendente;
     if (!o) o = criarFrame(s);
-    o.pendente = api({ acao: 'abrir', token: TOKEN, id: s.id }).then(function (d) {
+    o.pendente = (s.id === 'cargatermica' ? Promise.resolve({ url: 'ct.html' }) : api({ acao: 'abrir', token: TOKEN, id: s.id })).then(function (d) {
       o.url = d.url;
       o.t = Date.now();
       o.pendente = null;
@@ -759,6 +759,10 @@ nav.abas button[hidden]{display:none!important}
   }
 
   window.addEventListener('popstate', function () { if (sisAberto) fecharSistema(true); });
+  window.addEventListener('message', function (ev) {
+    if (ev.origin !== location.origin) return;
+    if (ev.data && ev.data.engelixCT === 'portal' && sisAberto) fecharSistema(false);
+  });
   $('sis-voltar').addEventListener('click', function () { fecharSistema(false); });
 
   function abrirSistema(s) {
