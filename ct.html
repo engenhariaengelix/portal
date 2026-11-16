@@ -186,6 +186,8 @@ body { background: #f4f5f7; }
 .jan-g .w2 { grid-column: span 2; }
 .jan-g .campo label { min-height: 0; }
 .barra.fim { margin: 4px 0 14px; }
+.acoes-lin { display: flex; flex-wrap: nowrap; gap: 8px; margin-top: 6px; }
+.acoes-lin > button { flex: 0 0 auto; white-space: nowrap; }
 .barra.fim button.acao { flex: 1 1 0; padding: 10px 12px; font-size: 14px; }
 </style>
 </head>
@@ -359,7 +361,7 @@ var PORTAL_API = 'https://script.google.com/macros/s/AKfycbxF-7TOyL8YyNmawN-MW3c
 var CT_API = 'https://script.google.com/macros/s/AKfycbwhvIaX2rnR0hOfiIRG4JRE29uKjcjNxYI3gzY0PTrt9WvWZecmyHZqCHfobf05vZGS/exec';
 var CHAVE_SESSAO = 'ct_sessao_v1';
 var SISTEMA_PORTAL = 'cargatermica';
-var VERSAO_APP = 'versão 16/11-3';   // aumente este número a cada alteração: aparece no topo e mostra qual versão está no ar
+var VERSAO_APP = 'versão 16/11-4';   // aumente este número a cada alteração: aparece no topo e mostra qual versão está no ar
 var ICONE_OLHO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 var ICONE_OLHO_RISCADO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 var ORIENT = [['N','Norte'],['NE','Nordeste'],['L','Leste'],['SE','Sudeste'],['S','Sul'],['SO','Sudoeste'],['O','Oeste'],['NO','Noroeste']];
@@ -841,28 +843,28 @@ function htmlTeto(a){
     '<option value="misto"' + (m === 'misto' ? ' selected' : '') + '>Tipos mistos (dividir a área)</option></select></div></div>';
   if (m === 'misto') {
     h += '<div style="margin-top:8px">' + a.teto.map(function(x, i){
-      return '<div class="linha-multi" style="grid-template-columns:2fr 1fr auto"><div class="campo"><select data-k="teto.' + i + '.t" data-t="t">' + TETOS.map(function(t){ return '<option value="' + t[0] + '"' + (x.t === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>' +
-        '<div class="campo">' + I('teto.' + i + '.a', x.a, 'área m²') + '</div><button class="acao sm perigo" onclick="delTeto(' + i + ')">Remover</button></div>';
-    }).join('') + '<button class="acao sm secundaria" onclick="addTeto()">+ tipo de teto</button><div class="dica" id="teto_soma"></div></div>';
+      return '<div class="linha-multi" style="grid-template-columns:2fr 1fr"><div class="campo"><select data-k="teto.' + i + '.t" data-t="t">' + TETOS.map(function(t){ return '<option value="' + t[0] + '"' + (x.t === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select></div>' +
+        '<div class="campo">' + I('teto.' + i + '.a', x.a, 'área m²') + '</div></div>';
+    }).join('') + '<div class="acoes-lin"><button class="acao sm secundaria" onclick="addTeto()">+ tipo de teto</button>' + (a.teto.length ? '<button class="acao sm perigo" onclick="delTeto(' + (a.teto.length - 1) + ')">Remover</button>' : '') + '</div><div class="dica" id="teto_soma"></div></div>';
   }
   return h;
 }
 function htmlAparelhos(a){
   var h = a.aparelhos.map(function(x, i){
-    return '<div class="linha-multi" style="grid-template-columns:2fr 1fr 1fr auto"><div class="campo"><label>Aparelho</label><select data-k="aparelhos.' + i + '.nome" data-t="ap"><option value="">Selecione...</option>' +
+    return '<div class="linha-multi" style="grid-template-columns:2fr 1fr 1fr"><div class="campo"><label>Aparelho</label><select data-k="aparelhos.' + i + '.nome" data-t="ap"><option value="">Selecione...</option>' +
       S.aparelhos.map(function(p){ return '<option value="' + esc(p.nome) + '"' + (x.nome === p.nome ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('') + '</select></div>' +
       '<div class="campo"><label>Quantidade</label>' + Ii('aparelhos.' + i + '.q', x.q, '1') + '</div><div class="campo"><label>Potência (W)</label>' + I('aparelhos.' + i + '.w', x.w) + '</div>' +
-      '<button class="acao sm perigo" onclick="delAp(' + i + ')">Remover</button></div>';
+      '</div>';
   }).join('');
-  return h + '<button class="acao sm secundaria" onclick="addAp()">+ linha</button> <button class="acao sm" onclick="formAparelho()">+ aparelho (cadastrar novo)</button>';
+  return h + '<div class="acoes-lin"><button class="acao sm secundaria" onclick="addAp()">+ linha</button>' + (a.aparelhos.length ? '<button class="acao sm perigo" onclick="delAp(' + (a.aparelhos.length - 1) + ')">Remover</button>' : '') + '<button class="acao sm" onclick="formAparelho()">+ aparelho novo</button></div>';
 }
 function htmlIlum(a){
   var h = a.ilum.map(function(x, i){
-    return '<div class="linha-multi" style="grid-template-columns:repeat(3,1fr) 1fr auto"><div class="campo"><label>nº de luminárias</label>' + Ii('ilum.' + i + '.l', x.l, '0') + '</div>' +
+    return '<div class="linha-multi" style="grid-template-columns:repeat(4,1fr)"><div class="campo"><label>nº de luminárias</label>' + Ii('ilum.' + i + '.l', x.l, '0') + '</div>' +
       '<div class="campo"><label>nº de lâmpadas por luminária</label>' + Ii('ilum.' + i + '.n', x.n, '0') + '</div><div class="campo"><label>potência por lâmpada (W)</label>' + I('ilum.' + i + '.w', x.w, '0') + '</div>' +
-      '<div class="campo"><label>Subtotal (W)</label><input readonly id="il_sub_' + i + '" value="' + fmt(pn(x.l) * pn(x.n) * pn(x.w), 2) + '"></div><button class="acao sm perigo" onclick="delIl(' + i + ')">Remover</button></div>';
+      '<div class="campo"><label>Subtotal (W)</label><input readonly id="il_sub_' + i + '" value="' + fmt(pn(x.l) * pn(x.n) * pn(x.w), 2) + '"></div></div>';
   }).join('');
-  return h + '<button class="acao sm secundaria" onclick="addIl()">+ linha de iluminação</button>';
+  return h + '<div class="acoes-lin"><button class="acao sm secundaria" onclick="addIl()">+ linha</button>' + (a.ilum.length ? '<button class="acao sm perigo" onclick="delIl(' + (a.ilum.length - 1) + ')">Remover</button>' : '') + '</div>';
 }
 function optsPav(atual){
   var n = (S.obra && S.obra.numPav) || 0, l = [];
