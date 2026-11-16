@@ -106,6 +106,12 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
 .det{display:flex;flex-direction:column;gap:2px;border-top:1px solid #e1e6ec;padding-top:8px;margin-top:8px}
 .det small{font-size:12px;color:#4f5d6b}
 .det span{font-size:15px;color:#222;line-height:1.35;white-space:pre-wrap}
+.det select,.det textarea,.det input{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #c4ccd6;border-radius:8px;background:#fff;color:#222;width:100%;box-sizing:border-box}
+.det textarea{min-height:72px;resize:vertical}
+.det .rev{display:flex;align-items:center;gap:12px}
+.det .rev button{width:38px;height:38px;border:1px solid #c4ccd6;border-radius:8px;background:#fff;color:#1f3a5f;font-size:20px;line-height:1}
+.det .mini{align-self:flex-start;background:#1f3a5f;color:#fff;border:0;border-radius:8px;padding:7px 16px;font-size:14px;margin-top:6px}
+#det-campos.salvando{opacity:.55;pointer-events:none}
 
 /* SENHA (alterar / esqueci) */
 #folha-senha{position:fixed;top:0;right:0;bottom:0;left:0;z-index:60;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
@@ -426,7 +432,6 @@ nav.abas button[hidden]{display:none!important}
   <div class="conteudo">
     <h2 id="det-titulo"></h2>
     <div id="det-campos"></div>
-    <p class="nota" style="margin-top:12px">Somente visualização. Para alterar, abra o Controle de Projetos.</p>
     <button class="sair" id="fechar-tarefa" type="button" style="margin-top:12px">Fechar</button>
   </div>
 </div>
@@ -1007,27 +1012,113 @@ nav.abas button[hidden]{display:none!important}
     });
   }
 
-  /* Detalhe (somente visualização) */
-  var CAMPOS_DET = [['Obra', 'obra'], ['Disciplina', 'disciplina'], ['Serviço', 'servico'], ['Revisão atual', 'revisao'],
-    ['Responsável', 'responsavel'], ['Apoio', 'apoio'], ['Situação', 'situacao'], ['Dependência', 'dependencia'],
-    ['Início da produção', 'inicio'], ['Fim da produção', 'fim'], ['Dias de produção', 'dias'], ['Observação', 'obs']];
+  /* Detalhe (editável conforme o perfil) */
+  var CHAVE_LISTAS = 'engelix_listas', DET = null, detListas = null;
+  var CAMPOS_FIXOS = [['Dependência', 'dependencia'], ['Início da produção', 'inicio'], ['Fim da produção', 'fim'], ['Dias de produção', 'dias']];
+
+  function detLinha(rot, filho) {
+    var d = document.createElement('div'); d.className = 'det';
+    var a = document.createElement('small'); a.textContent = rot;
+    d.appendChild(a); d.appendChild(filho);
+    $('det-campos').appendChild(d);
+  }
+  function detTexto(v) { var s = document.createElement('span'); s.textContent = v; return s; }
+  function detSomenteLer(rot, v) {
+    v = String(v == null ? '' : v).trim();
+    if (!v || v === '-') return;
+    detLinha(rot, detTexto(v));
+  }
+  function detSalvar(campo, extra, chaveX) {
+    var corpo = { acao: 'editarTarefa', token: TOKEN, linha: DET.linha, campo: campo };
+    for (var k in extra) corpo[k] = extra[k];
+    var x = DET, box = $('det-campos');
+    box.classList.add('salvando');
+    api(corpo).then(function (d) {
+      x[chaveX] = (campo === 'Observacao') ? corpo.valor : d.valor;
+      avisar('Salvo.');
+      ultimoResumo = 0;
+      carregarTarefas();
+    }).catch(function (e) { tratarErro(e); }).then(function () {
+      box.classList.remove('salvando');
+      if (DET === x && !$('folha-tarefa').hidden) detMontar(detListas);
+    });
+  }
+  function detSelect(valor, opcoes, campo, chaveX) {
+    var s = document.createElement('select');
+    var lista = opcoes.slice();
+    if (valor && lista.indexOf(valor) < 0) lista.unshift(valor);
+    lista.forEach(function (o) {
+      var op = document.createElement('option'); op.value = o; op.textContent = o;
+      if (o === valor) op.selected = true;
+      s.appendChild(op);
+    });
+    s.addEventListener('change', function () { detSalvar(campo, { valor: s.value }, chaveX); });
+    return s;
+  }
+  function detMontar(L) {
+    detListas = L;
+    var x = DET, box = $('det-campos');
+    box.innerHTML = '';
+    $('det-titulo').textContent = x.tarefa;
+    var papel = L ? L.papel : '';
+    var pleno = papel === 'pleno';
+    var basico = !!L && (pleno || papel === 'gerencia' || papel === 'operacional');
+    detLinha('Seu papel', detTexto(x.papel === 'resp' ? 'Responsável' : 'Apoio'));
+    if (pleno) {
+      detLinha('Obra', detSelect(x.obra, L.obras, 'Obra', 'obra'));
+      detLinha('Disciplina', detSelect(x.disciplina, L.disciplinas, 'Disciplina', 'disciplina'));
+      var si = document.createElement('input'); si.type = 'text'; si.maxLength = 200; si.value = x.servico || '';
+      si.addEventListener('change', function () { detSalvar('Servico', { valor: si.value }, 'servico'); });
+      detLinha('Serviço', si);
+      detLinha('Tarefa', detSelect(x.tarefa, L.tarefas, 'Tarefa', 'tarefa'));
+    } else {
+      detSomenteLer('Obra', x.obra); detSomenteLer('Disciplina', x.disciplina); detSomenteLer('Serviço', x.servico);
+    }
+    if (basico) {
+      var r = document.createElement('div'); r.className = 'rev';
+      var m1 = document.createElement('button'); m1.type = 'button'; m1.textContent = '−';
+      var m2 = document.createElement('button'); m2.type = 'button'; m2.textContent = '+';
+      var rv = document.createElement('span'); rv.textContent = x.revisao || '-';
+      m1.addEventListener('click', function () { detSalvar('Revisao', { delta: -1 }, 'revisao'); });
+      m2.addEventListener('click', function () { detSalvar('Revisao', { delta: 1 }, 'revisao'); });
+      r.appendChild(m1); r.appendChild(rv); r.appendChild(m2);
+      detLinha('Revisão atual', r);
+    } else detSomenteLer('Revisão atual', x.revisao);
+    if (pleno) {
+      var resp = (L.responsaveis || []).filter(function (n) { return n !== '-'; });
+      detLinha('Responsável', detSelect(x.responsavel, resp, 'Responsavel', 'responsavel'));
+      detLinha('Apoio', detSelect(x.apoio || '-', ['-'].concat(resp), 'Apoio', 'apoio'));
+    } else {
+      detSomenteLer('Responsável', x.responsavel); detSomenteLer('Apoio', x.apoio);
+    }
+    if (basico) detLinha('Situação', detSelect(x.situacao, L.situacoes, 'Situacao', 'situacao'));
+    else detSomenteLer('Situação', x.situacao);
+    CAMPOS_FIXOS.forEach(function (c) { detSomenteLer(c[0], x[c[1]]); });
+    if (basico) {
+      var w = document.createElement('div'); w.style.display = 'flex'; w.style.flexDirection = 'column';
+      var ta = document.createElement('textarea'); ta.maxLength = 2000; ta.value = x.obs || '';
+      var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'mini'; bt.textContent = 'Salvar observação';
+      bt.addEventListener('click', function () { detSalvar('Observacao', { valor: ta.value }, 'obs'); });
+      w.appendChild(ta); w.appendChild(bt);
+      detLinha('Observação', w);
+    } else detSomenteLer('Observação', x.obs);
+  }
 
   function abrirDetalhe(x) {
-    $('det-titulo').textContent = x.tarefa;
-    var box = $('det-campos');
-    box.innerHTML = '';
-    var linhas = [['Seu papel', x.papel === 'resp' ? 'Responsável' : 'Apoio']]
-      .concat(CAMPOS_DET.map(function (c) { return [c[0], x[c[1]]]; }));
-    linhas.forEach(function (l) {
-      var v = String(l[1] == null ? '' : l[1]).trim();
-      if (!v || v === '-') return;
-      var d = document.createElement('div'); d.className = 'det';
-      var a = document.createElement('small'); a.textContent = l[0];
-      var b = document.createElement('span'); b.textContent = v;
-      d.appendChild(a); d.appendChild(b);
-      box.appendChild(d);
-    });
+    DET = x;
+    var nome = $('nome-perfil').textContent;
+    var c = lerJson(CHAVE_LISTAS);
+    detMontar(c && c.nome === nome ? c.dados : null);
     $('folha-tarefa').hidden = false;
+    api({ acao: 'listas', token: TOKEN }).then(function (d) {
+      gravarJson(CHAVE_LISTAS, { nome: nome, dados: d });
+      if (DET !== x || $('folha-tarefa').hidden) return;
+      if (JSON.stringify(d) === JSON.stringify(detListas)) return;
+      if (detListas && $('det-campos').contains(document.activeElement)) return;
+      detMontar(d);
+    }).catch(function (e) {
+      if (e && e.message === 'SESSAO_INVALIDA') tratarErro(e);
+    });
   }
 
   $('fechar-tarefa').addEventListener('click', function () { $('folha-tarefa').hidden = true; });
@@ -1243,7 +1334,7 @@ nav.abas button[hidden]{display:none!important}
       if (velho) velho.parentNode.removeChild(velho);
       if (EH_CLIENTE) return;
       var d = document.createElement('div'); d.className = 'filtro sub-abas';
-      [['tarefas', 'Minhas tarefas'], ['resumo', 'Resumo geral'], ['completo', 'Controle completo']].forEach(function (x) {
+      [['tarefas', 'Minhas tarefas'], ['resumo', 'Resumo geral']].forEach(function (x) {
         var b = document.createElement('button'); b.type = 'button'; b.textContent = x[1];
         if ((x[0] === 'tarefas' && id === 'painel-tarefas') || (x[0] === 'resumo' && id === 'painel-resumo')) b.className = 'on';
         b.addEventListener('click', function () {
@@ -1264,7 +1355,7 @@ nav.abas button[hidden]{display:none!important}
     if (EH_CLIENTE) { itens.push(['resumo', 'Resumo das obras']); itens.push(['perfil', 'Perfil']); }
     else {
       itens.push(['perfil', 'Perfil']);
-      if (temCtl) itens.push(['tarefas', 'Controle de projetos']);
+      if (temCtl) { itens.push(['tarefas', 'Controle de projetos']); itens.push(['completo', 'Controle completo']); }
       if (temApps) itens.push(['apps', 'Aplicativos']);
     }
     m.innerHTML = '';
@@ -1290,7 +1381,12 @@ nav.abas button[hidden]{display:none!important}
   $('b-menu').addEventListener('click', alternarMenu);
   $('menu-app').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-ir]');
-    if (b) irPara(b.getAttribute('data-ir'));
+    if (!b) return;
+    if (b.getAttribute('data-ir') === 'completo') {
+      fecharMenu();
+      var sc = sistemaPorId('controle');
+      if (sc) { sc.__completo = true; abrirSistema(sc); sc.__completo = false; }
+    } else irPara(b.getAttribute('data-ir'));
   });
   document.addEventListener('click', function (ev) {
     if (!ev.target.closest('#menu-app') && !ev.target.closest('#b-menu') && !ev.target.closest('#ir-resumo')) fecharMenu();
