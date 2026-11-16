@@ -89,7 +89,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 
 /* TAREFAS REAIS (etapa 3) */
 #lista-inicio{display:flex;flex-direction:column;gap:10px}
-.obra-bt{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;background:#fff;border:2px solid #1f3a5f;border-radius:12px;padding:10px 14px;text-align:left;color:#222}
+.obra-bt{display:flex;align-items:center;gap:10px;width:100%;min-height:56px;background:#fff;border:2px solid #c4ccd6;border-radius:12px;padding:10px 14px;text-align:left;color:#222}
 .obra-bt .o{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .obra-bt .o span:first-child{font-size:15px;font-weight:bold;color:#1f3a5f}
 .obra-bt .o span:last-child{font-size:12px;color:#4f5d6b}
@@ -1355,7 +1355,7 @@ nav.abas button[hidden]{display:none!important}
     if (EH_CLIENTE) { itens.push(['resumo', 'Resumo das obras']); itens.push(['perfil', 'Perfil']); }
     else {
       itens.push(['perfil', 'Perfil']);
-      if (temCtl) { itens.push(['tarefas', 'Controle de projetos']); itens.push(['completo', 'Controle completo']); }
+      if (temCtl) itens.push(['tarefas', 'Controle de projetos']);
       if (temApps) itens.push(['apps', 'Aplicativos']);
     }
     m.innerHTML = '';
