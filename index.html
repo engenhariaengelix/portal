@@ -235,6 +235,15 @@ nav.abas button[hidden]{display:none!important}
   #grade-apps{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
   #menu-app{top:76px;right:32px;left:auto;bottom:auto}
 }
+.mat{width:100%}
+.mat thead th{min-width:90px;white-space:normal}
+.mat td.cm{white-space:normal;font-size:12px;min-width:90px;padding:7px 6px;border:1px solid #fff}
+.mat td.edit{cursor:pointer}
+.mat td.cm.cor-amarelo{background:#fff6b3}.mat td.cm.cor-verde{background:#c9f0d0}.mat td.cm.cor-vermelho{background:#fbd0cf}.mat td.cm.cor-azul{background:#cfe0f5}
+@media (min-width:900px){
+  #nome-pc,#alterar-senha,#ir-email{display:none!important}
+  #ir-inicio{text-decoration:none;display:flex;align-items:center}
+}
 </style>
 </head>
 <body>
@@ -286,7 +295,7 @@ nav.abas button[hidden]{display:none!important}
       <span id="nome-pc"></span>
       <button type="button" id="ir-resumo">☰ menu</button>
       <button type="button" id="ir-email" hidden>e-mail</button>
-      <button type="button" id="ir-inicio" hidden>início</button>
+      <button type="button" id="ir-inicio" hidden aria-label="Início"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></button>
       <button type="button" id="alterar-senha">alterar senha</button>
       <button type="button" id="sair-pc">sair</button>
     </div>
@@ -325,12 +334,15 @@ nav.abas button[hidden]{display:none!important}
       <h2 id="nome-perfil"></h2>
       <form class="pf-form" id="pf-form" autocomplete="off">
         <label>Usuário (login)<input id="pf-user" readonly></label>
-        <label>Nome completo<input id="pf-nc" maxlength="80"></label>
-        <label>Função<input id="pf-fn" maxlength="60"></label>
-        <label>Telefone<input id="pf-tel" type="tel" maxlength="30"></label>
-        <label>E-mail (usado para recuperar a senha)<input id="pf-email" type="email" maxlength="100"></label>
+        <label>Nome completo<input id="pf-nc" maxlength="80" readonly></label>
+        <label>Título (ex.: arquiteto)<input id="pf-ti" maxlength="40" readonly></label>
+        <label>Cargo (ex.: gerente)<input id="pf-fn" maxlength="60" readonly></label>
+        <label>Telefone<input id="pf-tel" type="tel" inputmode="tel" maxlength="15" placeholder="(XX) XXXXX-XXXX" readonly></label>
+        <label>E-mail (usado para recuperar a senha)<input id="pf-email" type="email" maxlength="100" readonly></label>
         <label>Perfil no app<input id="pf-perfis" readonly></label>
-        <button class="sair" id="pf-salvar" type="submit" style="background:#1f3a5f;color:#fff">Salvar dados</button>
+        <button class="sair" id="pf-editar" type="button" style="background:#1f3a5f;color:#fff">Editar dados</button>
+        <button class="sair" id="pf-salvar" type="submit" style="background:#1f3a5f;color:#fff" hidden>Salvar dados</button>
+        <button class="sair" id="pf-cancelar" type="button" hidden>Cancelar</button>
       </form>
       <button class="sair" id="alterar-senha-cel" type="button" style="background:#fff;color:#1f3a5f;border:1px solid #1f3a5f;margin-bottom:10px">Alterar senha</button>
       <button class="sair" id="sair" type="button">Sair</button>
@@ -740,6 +752,7 @@ nav.abas button[hidden]{display:none!important}
   $('sis-voltar').addEventListener('click', function () { fecharSistema(false); });
 
   function abrirSistema(s) {
+    if (s.id === 'email') { abrirEmail(); return; }
     if (s.id === 'controle' && !s.__completo && !EH_CLIENTE) { irPara('tarefas'); return; }
     if (s.emConstrucao) { avisar(s.nome + ' ainda está em construção.'); return; }
     if (s.externo) { window.open(s.link, '_blank'); return; }
@@ -1039,7 +1052,7 @@ nav.abas button[hidden]{display:none!important}
       b.classList.toggle('on', b.getAttribute('data-aba') === aba);
     });
     document.body.className = document.body.className.replace(/\baba-\S+/g, '').trim() + ' aba-' + aba;
-    $('ir-inicio').hidden = aba === 'inicio' || EH_CLIENTE;
+    $('ir-inicio').hidden = EH_CLIENTE;
     fecharMenu();
     fecharCores();
     if (aba === 'resumo') abrirResumo();
@@ -1099,6 +1112,10 @@ nav.abas button[hidden]{display:none!important}
     if (podeEditarCel(cel)) return '<button type="button" class="' + cls + '" data-d="' + d + '" data-l="' + l + '" data-o="' + o + '">' + txt + '</button>';
     return '<span class="' + cls + '">' + txt + '</span>';
   }
+  function celMat(cel, d, l, o) {
+    var ed = podeEditarCel(cel);
+    return '<td class="cm' + (cel.c ? ' cor-' + cel.c : '') + (ed ? ' edit" data-d="' + d + '" data-l="' + l + '" data-o="' + o + '"' : '"') + '>' + esc(cel.s) + '</td>';
+  }
   function desenharResumo() {
     var box = $('res-corpo'), R = RESUMO;
     if (!R) { box.innerHTML = '<div class="vazio">Carregando resumo…</div>'; $('res-hora').textContent = ''; return; }
@@ -1135,7 +1152,7 @@ nav.abas button[hidden]{display:none!important}
       h += '<tr class="disc"><td colspan="' + (R.obras.length + 1) + '">' + esc(D.nome) + '</td></tr>';
       D.linhas.forEach(function (L, l) {
         h += '<tr><td class="mat-p">' + esc(L.r) + '</td>';
-        L.c.forEach(function (cel, o) { h += '<td>' + (cel ? pilula(cel, d, l, o) : '') + '</td>'; });
+        L.c.forEach(function (cel, o) { h += cel ? celMat(cel, d, l, o) : '<td></td>'; });
         h += '</tr>';
       });
     });
@@ -1175,13 +1192,13 @@ nav.abas button[hidden]{display:none!important}
     });
   }
   $('painel-resumo').addEventListener('click', function (ev) {
-    var p = ev.target.closest('button.pill');
+    var p = ev.target.closest('button.pill,td.edit');
     if (p) { ev.stopPropagation(); abrirCores(p); return; }
     var b = ev.target.closest('[data-obra]');
     if (b) { var o = b.getAttribute('data-obra'); ABERTAS[o] = !ABERTAS[o]; desenharResumo(); }
   });
   document.addEventListener('click', function (ev) {
-    if (!ev.target.closest('#res-cores') && !ev.target.closest('button.pill')) fecharCores();
+    if (!ev.target.closest('#res-cores') && !ev.target.closest('button.pill,td.edit')) fecharCores();
   });
   $('res-alt').addEventListener('click', function () {
     var on = $('painel-resumo').classList.toggle('matriz-on');
@@ -1201,7 +1218,7 @@ nav.abas button[hidden]{display:none!important}
   }
   function montarApps() {
     var g = $('grade-apps'), s = secaoAtual();
-    var lista = (s ? s.sistemas : []).filter(function (x) { return x.id !== 'controle'; });
+    var lista = (s ? s.sistemas : []).filter(function (x) { return x.id !== 'controle' && x.id !== 'email'; });
     g.innerHTML = '';
     if (!lista.length) { g.innerHTML = '<div class="vazio">Nenhum aplicativo disponível para você.</div>'; return; }
     lista.forEach(function (sis) {
@@ -1237,7 +1254,7 @@ nav.abas button[hidden]{display:none!important}
   function montarMenu() {
     var m = $('menu-app'), sec = secaoAtual(), lista = sec ? sec.sistemas : [], itens = [];
     var temCtl = lista.some(function (x) { return x.id === 'controle'; });
-    var temApps = lista.some(function (x) { return x.id !== 'controle'; });
+    var temApps = lista.some(function (x) { return x.id !== 'controle' && x.id !== 'email'; });
     if (EH_CLIENTE) { itens.push(['resumo', 'Resumo das obras']); itens.push(['perfil', 'Perfil']); }
     else {
       itens.push(['perfil', 'Perfil']);
@@ -1275,7 +1292,7 @@ nav.abas button[hidden]{display:none!important}
 
   function abrirEmail() {
     var ua = navigator.userAgent || '', s = sistemaPorId('email');
-    if (/android/i.test(ua)) { location.href = 'intent://#Intent;package=br.com.uol.mail.uolhost;end'; return; }
+    if (/android/i.test(ua)) { location.href = 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=br.com.uol.mail.uolhost;end'; return; }
     if (/iphone|ipad|ipod/i.test(ua)) { window.open('https://apps.apple.com/br/app/uol-mail-pro/id1372865834', '_blank'); return; }
     if (s && s.link) window.open(s.link, '_blank');
   }
@@ -1283,14 +1300,31 @@ nav.abas button[hidden]{display:none!important}
   $('ir-email').addEventListener('click', abrirEmail);
 
   /* PERFIL */
+  var EDITANDO = false;
+  function modoEdicao(on) {
+    EDITANDO = on;
+    ['pf-nc', 'pf-ti', 'pf-fn', 'pf-tel', 'pf-email'].forEach(function (id) { $(id).readOnly = !on; });
+    $('pf-editar').hidden = on; $('pf-salvar').hidden = !on; $('pf-cancelar').hidden = !on;
+    if (!on) desenharPerfil();
+  }
+  function mascaraTel(v) {
+    var d = String(v || '').replace(/\D/g, '').slice(0, 11);
+    if (!d) return '';
+    if (d.length < 3) return '(' + d;
+    if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+    return '(' + d.slice(0, 2) + ') ' + d.slice(2, d.length > 10 ? 7 : 6) + '-' + d.slice(d.length > 10 ? 7 : 6);
+  }
+  $('pf-editar').addEventListener('click', function () { modoEdicao(true); $('pf-nc').focus(); });
+  $('pf-cancelar').addEventListener('click', function () { modoEdicao(false); });
+  $('pf-tel').addEventListener('input', function () { this.value = mascaraTel(this.value); });
   function gravarPerfil() { gravarJson(CHAVE_PERFIL, { nome: $('nome-perfil').textContent, dados: PERFIL }); }
   function desenharPerfil() {
     var P = PERFIL; if (!P) return;
-    var f = document.activeElement;
-    if (f && $('pf-form').contains(f)) return;
+    if (EDITANDO) return;
     $('pf-user').value = P.nome || '';
     $('pf-nc').value = P.nomeCompleto || '';
     $('pf-fn').value = P.funcao || '';
+    $('pf-ti').value = P.titulo || '';
     $('pf-tel').value = P.telefone || '';
     $('pf-email').value = P.email || '';
     $('pf-perfis').value = (P.perfis || []).map(function (x) { return x.empresa.replace(/^ENGELIX\s+/i, '') + ': ' + x.papel; }).join(' · ');
@@ -1307,18 +1341,17 @@ nav.abas button[hidden]{display:none!important}
       var c = lerJson(CHAVE_PERFIL);
       if (c && c.nome === $('nome-perfil').textContent && c.dados) PERFIL = c.dados;
     }
-    desenharPerfil();
+    modoEdicao(false);
     carregarPerfil();
   }
   $('pf-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var b = $('pf-salvar'); b.disabled = true; b.textContent = 'Salvando…';
-    api({ acao: 'salvarPerfil', token: TOKEN, nomeCompleto: $('pf-nc').value, funcao: $('pf-fn').value,
+    api({ acao: 'salvarPerfil', token: TOKEN, nomeCompleto: $('pf-nc').value, funcao: $('pf-fn').value, titulo: $('pf-ti').value,
           telefone: $('pf-tel').value, email: $('pf-email').value }).then(function (d) {
       PERFIL = d; gravarPerfil();
       b.disabled = false; b.textContent = 'Salvar dados';
-      document.activeElement && document.activeElement.blur();
-      desenharPerfil(); avisar('Dados salvos.');
+      modoEdicao(false); avisar('Dados salvos.');
     }).catch(function (e) {
       b.disabled = false; b.textContent = 'Salvar dados'; tratarErro(e);
     });
