@@ -829,7 +829,9 @@ nav.abas button[hidden]{display:none!important}
       d.className = 'desc';
       d.textContent = s.descricao || '';
       b.appendChild(d);
-      b.addEventListener('click', function () { abrirSistema(s); });
+      b.addEventListener('click', function () {
+        if (s.id === 'controle' && !EH_CLIENTE) irPara('ctl'); else abrirSistema(s);
+      });
       g.appendChild(b);
     });
   }
