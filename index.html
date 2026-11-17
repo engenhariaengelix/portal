@@ -236,7 +236,9 @@ nav.abas button[hidden]{display:none!important}
 .pf-form input{min-height:44px;border-radius:6px;border:1px solid #c4ccd6;padding:0 12px;font-size:15px;background:#fff;color:#222}
 .pf-form input[readonly]{background:#f4f5f7;color:#4f5d6b}
 #grade-apps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 8px}
-#grade-apps .sis{grid-column:auto}
+#grade-apps .sis,#grade-ctl .sis{grid-column:auto}
+#grade-ctl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 8px}
+#menu-sub{display:flex;flex-direction:column}
 @media (min-width:900px){
   body:not(.aba-inicio) #painel-inicio{display:none!important}
   body:not(.aba-tarefas) #painel-tarefas{display:none!important}
@@ -244,6 +246,8 @@ nav.abas button[hidden]{display:none!important}
   body.aba-perfil #painel-perfil{display:flex!important;max-width:560px;margin:24px auto 0}
   #painel-apps{max-width:1240px;width:100%;margin:24px auto 0}
   #grade-apps{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+  #painel-ctl{max-width:1240px;width:100%;margin:24px auto 0}
+  #grade-ctl{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
   #menu-app{top:76px;right:32px;left:auto;bottom:auto}
 }
 .mat{width:100%}
@@ -366,6 +370,10 @@ nav.abas button[hidden]{display:none!important}
       <div class="painel" id="painel-apps" hidden>
       <h2>Aplicativos</h2>
       <div id="grade-apps"></div>
+    </div>
+    <div class="painel" id="painel-ctl" hidden>
+      <h2>Controle de projetos</h2>
+      <div id="grade-ctl"></div>
     </div>
     <div class="painel" id="painel-resumo" hidden>
       <div class="res-bar"><h2>Resumo</h2><button type="button" class="res-alt" id="res-alt">Ver matriz</button></div>
@@ -1029,6 +1037,33 @@ nav.abas button[hidden]{display:none!important}
     });
   }
 
+  /* Controle de projetos: itens do submenu e da tela de ícones */
+  function itensCtl() {
+    var l = [
+      ['tarefas', 'Minhas tarefas', 'Suas tarefas por obra', ICONES.controle],
+      ['resumo', 'Resumo geral', 'Situação de todas as obras', '<path d="M3 3v18h18"/><path d="M7 15v3M12 9v9M17 5v13"/>']
+    ];
+    if (ehGestor()) {
+      l.push(['x-imoveis', 'Edificações cadastradas', 'Dados cadastrais dos imóveis', '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/>']);
+      l.push(['x-novoimovel', 'Cadastrar imóvel', 'Nova edificação', '<path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14h6"/>']);
+      l.push(['x-novatarefa', 'Cadastrar tarefa', 'Nova tarefa em uma obra', '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M12 11v6M9 14h6"/>']);
+    }
+    return l;
+  }
+  function montarCtl() {
+    var g = $('grade-ctl'); g.innerHTML = '';
+    itensCtl().forEach(function (x) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sis';
+      b.innerHTML = '<span class="ic"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1f3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (x[3] || '') + '</svg></span>';
+      var r = document.createElement('span'); r.className = 'nm'; r.textContent = x[1]; b.appendChild(r);
+      var d = document.createElement('span'); d.className = 'desc'; d.textContent = x[2]; b.appendChild(d);
+      b.addEventListener('click', function () {
+        if (/^x-/.test(x[0])) abrirCad(x[0]); else irPara(x[0]);
+      });
+      g.appendChild(b);
+    });
+  }
+
   /* Cadastros do Controle (pleno e gerência) */
   var PAPEL_ENG = '';
   function papelEngDe(u) {
@@ -1077,7 +1112,7 @@ nav.abas button[hidden]{display:none!important}
     else if (tipo === 'x-novatarefa') cadNovaTarefa();
   }
   function cadImoveis() {
-    $('cad-titulo').textContent = 'Dados das edificações';
+    $('cad-titulo').textContent = 'Edificações cadastradas';
     var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
     api({ acao: 'imoveis', token: TOKEN }).then(function (d) {
       corpo.innerHTML = '';
@@ -1280,7 +1315,7 @@ nav.abas button[hidden]{display:none!important}
     if (!aba) return;
     if (EH_CLIENTE && aba !== 'perfil') aba = 'resumo';
     ABA_ATUAL = aba;
-    ['inicio', 'tarefas', 'resumo', 'perfil', 'apps'].forEach(function (a) {
+    ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl'].forEach(function (a) {
       $('painel-' + a).hidden = a !== aba;
     });
     Array.prototype.forEach.call(document.querySelectorAll('nav.abas button'), function (b) {
@@ -1290,6 +1325,7 @@ nav.abas button[hidden]{display:none!important}
     $('ir-inicio').hidden = EH_CLIENTE;
     fecharMenu();
     fecharCores();
+    if (aba === 'ctl') montarCtl();
     if (aba === 'resumo') abrirResumo();
     if (aba === 'perfil') abrirPerfil();
     $('corpo').scrollTop = 0;
@@ -1493,17 +1529,26 @@ nav.abas button[hidden]{display:none!important}
     if (EH_CLIENTE) { itens.push(['resumo', 'Resumo das obras']); itens.push(['perfil', 'Perfil']); }
     else {
       itens.push(['perfil', 'Perfil']);
-      if (temCtl) itens.push(['tarefas', 'Controle de projetos']);
-      if (temCtl && ehGestor()) {
-        itens.push(['x-imoveis', '   · Dados das edificações']);
-        itens.push(['x-novoimovel', '   · Cadastrar imóvel']);
-        itens.push(['x-novatarefa', '   · Cadastrar tarefa']);
-      }
+      if (temCtl) itens.push(['ctl', 'Controle de projetos']);
       if (temApps) itens.push(['apps', 'Aplicativos']);
     }
     m.innerHTML = '';
     itens.forEach(function (it) {
-      var b = document.createElement('button'); b.type = 'button'; b.textContent = it[1]; b.setAttribute('data-ir', it[0]);
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-ir', it[0]);
+      if (it[0] === 'ctl') {
+        b.innerHTML = '<span>' + it[1] + '</span><span id="menu-seta">▾</span>';
+        b.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+        m.appendChild(b);
+        var sub = document.createElement('div'); sub.id = 'menu-sub'; sub.hidden = true;
+        itensCtl().forEach(function (x) {
+          var s = document.createElement('button'); s.type = 'button'; s.textContent = x[1]; s.setAttribute('data-ir', x[0]);
+          s.style.cssText = 'padding-left:30px;font-weight:normal';
+          sub.appendChild(s);
+        });
+        m.appendChild(sub);
+        return;
+      }
+      b.textContent = it[1];
       m.appendChild(b);
     });
     var em = !EH_CLIENTE && !!sistemaPorId('email');
@@ -1514,17 +1559,28 @@ nav.abas button[hidden]{display:none!important}
     marcarMenu();
   }
   function marcarMenu() {
-    var grupo = (ABA_ATUAL === 'resumo' && EH_CLIENTE) ? 'resumo' : (ABA_ATUAL === 'resumo' ? 'tarefas' : ABA_ATUAL);
+    var grupo = (ABA_ATUAL === 'resumo' && EH_CLIENTE) ? 'resumo' : ABA_ATUAL;
     Array.prototype.forEach.call($('menu-app').querySelectorAll('button'), function (b) {
       b.classList.toggle('on', b.getAttribute('data-ir') === grupo);
     });
   }
-  function fecharMenu() { $('menu-app').hidden = true; }
+  function fecharMenu() {
+    $('menu-app').hidden = true;
+    var sb = $('menu-sub'), se = $('menu-seta');
+    if (sb) sb.hidden = true;
+    if (se) se.textContent = '▾';
+  }
   function alternarMenu(ev) { ev.stopPropagation(); marcarMenu(); $('menu-app').hidden = !$('menu-app').hidden; }
   $('b-menu').addEventListener('click', alternarMenu);
   $('menu-app').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-ir]');
     if (!b) return;
+    if (b.getAttribute('data-ir') === 'ctl') {
+      var sb2 = $('menu-sub');
+      if (sb2 && sb2.hidden) { sb2.hidden = false; $('menu-seta').textContent = '▴'; }
+      else { fecharMenu(); irPara('ctl'); }
+      return;
+    }
     if (/^x-/.test(b.getAttribute('data-ir'))) { fecharMenu(); abrirCad(b.getAttribute('data-ir')); return; }
     if (b.getAttribute('data-ir') === 'completo') {
       fecharMenu();
