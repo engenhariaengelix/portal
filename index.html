@@ -239,6 +239,8 @@ nav.abas button[hidden]{display:none!important}
 #grade-apps .sis,#grade-ctl .sis{grid-column:auto}
 #grade-ctl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 8px}
 #menu-sub{display:flex;flex-direction:column}
+.todas-f{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.todas-f select,.todas-f input[type=text]{font:inherit;font-size:14px;padding:8px;border:1px solid #c4ccd6;border-radius:8px;background:#fff;min-width:0;width:100%;box-sizing:border-box}
 @media (min-width:900px){
   body:not(.aba-inicio) #painel-inicio{display:none!important}
   body:not(.aba-tarefas) #painel-tarefas{display:none!important}
@@ -247,6 +249,8 @@ nav.abas button[hidden]{display:none!important}
   #painel-apps{max-width:1240px;width:100%;margin:24px auto 0}
   #grade-apps{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
   #painel-ctl{max-width:1240px;width:100%;margin:24px auto 0}
+  #painel-todas{max-width:900px;width:100%;margin:24px auto 0}
+  .todas-f{grid-template-columns:repeat(4,1fr)}
   #grade-ctl{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
   #menu-app{top:76px;right:32px;left:auto;bottom:auto}
 }
@@ -370,6 +374,11 @@ nav.abas button[hidden]{display:none!important}
       <div class="painel" id="painel-apps" hidden>
       <h2>Aplicativos</h2>
       <div id="grade-apps"></div>
+    </div>
+    <div class="painel" id="painel-todas" hidden>
+      <h2>Todas as tarefas</h2>
+      <div class="todas-f" id="todas-filtros"></div>
+      <div id="todas-lista"></div>
     </div>
     <div class="painel" id="painel-ctl" hidden>
       <h2>Controle de projetos</h2>
@@ -1005,8 +1014,8 @@ nav.abas button[hidden]{display:none!important}
     var b = document.createElement('span'); b.textContent = (x.disciplina ? x.disciplina + ' · ' : '') + x.situacao;
     t.appendChild(a); t.appendChild(b);
     var q = document.createElement('span');
-    q.className = 'etq ' + x.papel;
-    q.textContent = x.papel === 'resp' ? 'Responsável' : 'Apoio';
+    q.className = 'etq ' + (x.papel || 'resp');
+    q.textContent = x.papel === 'resp' ? 'Responsável' : (x.papel === 'apoio' ? 'Apoio' : (x.responsavel || '—'));
     d.appendChild(t); d.appendChild(q);
     d.addEventListener('click', function () { abrirDetalhe(x); });
     return d;
@@ -1039,6 +1048,78 @@ nav.abas button[hidden]{display:none!important}
     });
   }
 
+  /* Todas as tarefas (pleno e gerência) */
+  var TODAS = null, ultimaTodas = 0, carregandoTodas = false, FT = { obra: '', disc: '', resp: '', sit: '', q: '', enc: false };
+  function abrirTodas() {
+    if (!ehGestor()) { irPara('inicio'); return; }
+    if (!$('todas-filtros').firstChild) montarFiltrosTodas();
+    desenharTodas();
+    if (Date.now() - ultimaTodas > 15000) carregarTodas();
+  }
+  function carregarTodas() {
+    if (!TOKEN || carregandoTodas) return;
+    carregandoTodas = true;
+    api({ acao: 'todasTarefas', token: TOKEN }).then(function (d) {
+      carregandoTodas = false; TODAS = d.tarefas; ultimaTodas = Date.now();
+      desenharTodas();
+    }).catch(function (e) {
+      carregandoTodas = false;
+      if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
+      if (!TODAS) $('todas-lista').innerHTML = '<div class="vazio">Não foi possível carregar. Tente de novo.</div>';
+    });
+  }
+  function montarFiltrosTodas() {
+    var box = $('todas-filtros');
+    var q = document.createElement('input'); q.type = 'text'; q.placeholder = 'Buscar tarefa'; q.style.gridColumn = '1 / -1';
+    q.addEventListener('input', function () { FT.q = q.value.trim().toLowerCase(); desenharTodas(); });
+    box.appendChild(q);
+    [['obra', 'Todas as obras'], ['disc', 'Todas as disciplinas'], ['resp', 'Todos os responsáveis'], ['sit', 'Todas as situações']].forEach(function (f) {
+      var s = document.createElement('select'); s.id = 'ft-' + f[0]; s.setAttribute('aria-label', f[1]);
+      var o = document.createElement('option'); o.value = ''; o.textContent = f[1]; s.appendChild(o);
+      s.addEventListener('change', function () { FT[f[0]] = s.value; desenharTodas(); });
+      box.appendChild(s);
+    });
+    var l = document.createElement('label'); l.style.cssText = 'grid-column:1 / -1;font-size:13px;color:#4f5d6b;display:flex;gap:8px;align-items:center';
+    var c = document.createElement('input'); c.type = 'checkbox';
+    c.addEventListener('change', function () { FT.enc = c.checked; desenharTodas(); });
+    l.appendChild(c); l.appendChild(document.createTextNode('Incluir encerradas e obras finalizadas'));
+    box.appendChild(l);
+  }
+  function atualizarOpcoesTodas() {
+    [['obra', 'obra'], ['disc', 'disciplina'], ['resp', 'responsavel'], ['sit', 'situacao']].forEach(function (f) {
+      var s = $('ft-' + f[0]); if (!s) return;
+      var vals = [];
+      (TODAS || []).forEach(function (x) { var v = x[f[1]]; if (v && vals.indexOf(v) < 0) vals.push(v); });
+      vals.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+      var atual = FT[f[0]];
+      while (s.options.length > 1) s.remove(1);
+      vals.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o); });
+      s.value = vals.indexOf(atual) >= 0 ? atual : '';
+      FT[f[0]] = s.value;
+    });
+  }
+  function desenharTodas() {
+    var box = $('todas-lista');
+    if (!TODAS) { box.innerHTML = '<div class="vazio">Carregando…</div>'; return; }
+    atualizarOpcoesTodas();
+    var lista = TODAS.filter(function (x) {
+      if (!FT.enc && (x.encerrada || x.obraFinalizada)) return false;
+      if (FT.obra && x.obra !== FT.obra) return false;
+      if (FT.disc && x.disciplina !== FT.disc) return false;
+      if (FT.resp && x.responsavel !== FT.resp) return false;
+      if (FT.sit && x.situacao !== FT.sit) return false;
+      if (FT.q && (x.tarefa + ' ' + x.servico).toLowerCase().indexOf(FT.q) < 0) return false;
+      return true;
+    });
+    box.innerHTML = '';
+    if (!lista.length) { box.innerHTML = '<div class="vazio">Nenhuma tarefa com esses filtros.</div>'; return; }
+    var obra = null;
+    lista.forEach(function (x) {
+      if (x.obra !== obra) { obra = x.obra; var h = document.createElement('div'); h.className = 'obra-t'; h.textContent = obra; box.appendChild(h); }
+      box.appendChild(cartaoTarefa(x));
+    });
+  }
+
   /* Controle de projetos: itens do submenu e da tela de ícones */
   function itensCtl() {
     var l = [
@@ -1046,6 +1127,7 @@ nav.abas button[hidden]{display:none!important}
       ['resumo', 'Resumo geral', 'Situação de todas as obras', '<path d="M3 3v18h18"/><path d="M7 15v3M12 9v9M17 5v13"/>']
     ];
     if (ehGestor()) {
+      l.push(['todas', 'Todas as tarefas', 'Edite as tarefas de todos', '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>']);
       l.push(['x-imoveis', 'Edificações cadastradas', 'Dados cadastrais dos imóveis', '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/>']);
       l.push(['x-novoimovel', 'Cadastrar imóvel', 'Nova edificação', '<path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14h6"/>']);
       l.push(['x-novatarefa', 'Cadastrar tarefa', 'Nova tarefa em uma obra', '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M12 11v6M9 14h6"/>']);
@@ -1213,6 +1295,7 @@ nav.abas button[hidden]{display:none!important}
       avisar('Salvo.');
       ultimoResumo = 0;
       carregarTarefas();
+      if (ABA_ATUAL === 'todas') { ultimaTodas = 0; carregarTodas(); }
     }).catch(function (e) { tratarErro(e); }).then(function () {
       box.classList.remove('salvando');
       if (DET === x && !$('folha-tarefa').hidden) detMontar(detListas);
@@ -1238,7 +1321,7 @@ nav.abas button[hidden]{display:none!important}
     var papel = L ? L.papel : '';
     var pleno = papel === 'pleno';
     var basico = !!L && (pleno || papel === 'gerencia' || papel === 'operacional');
-    detLinha('Seu papel', detTexto(x.papel === 'resp' ? 'Responsável' : 'Apoio'));
+    if (x.papel) detLinha('Seu papel', detTexto(x.papel === 'resp' ? 'Responsável' : 'Apoio'));
     if (pleno) {
       detLinha('Obra', detSelect(x.obra, L.obras, 'Obra', 'obra'));
       detLinha('Disciplina', detSelect(x.disciplina, L.disciplinas, 'Disciplina', 'disciplina'));
@@ -1277,6 +1360,30 @@ nav.abas button[hidden]{display:none!important}
       w.appendChild(ta); w.appendChild(bt);
       detLinha('Observação', w);
     } else detSomenteLer('Observação', x.obs);
+    if (papel === 'pleno' || papel === 'gerencia') detExcluir();
+  }
+  function detExcluir() {
+    var w = document.createElement('div'); w.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.style.background = '#b03a2e'; b.textContent = 'Excluir tarefa';
+    b.addEventListener('click', function () {
+      w.innerHTML = '';
+      var t = document.createElement('span'); t.textContent = 'Excluir esta tarefa da planilha? Não dá para desfazer.'; t.style.width = '100%';
+      var s = document.createElement('button'); s.type = 'button'; s.className = 'mini'; s.style.background = '#b03a2e'; s.textContent = 'Sim, excluir';
+      var n = document.createElement('button'); n.type = 'button'; n.className = 'mini'; n.style.background = '#6c7a89'; n.textContent = 'Cancelar';
+      n.addEventListener('click', function () { detMontar(detListas); });
+      s.addEventListener('click', function () {
+        s.disabled = true;
+        var x = DET;
+        api({ acao: 'excluirTarefa', token: TOKEN, linha: x.linha, obra: x.obra, tarefa: x.tarefa }).then(function () {
+          $('folha-tarefa').hidden = true; avisar('Tarefa excluída.');
+          ultimoResumo = 0; carregarTarefas();
+          if (ABA_ATUAL === 'todas') { ultimaTodas = 0; carregarTodas(); }
+        }).catch(function (e) { s.disabled = false; tratarErro(e); });
+      });
+      w.appendChild(t); w.appendChild(s); w.appendChild(n);
+    });
+    w.appendChild(b);
+    detLinha('', w);
   }
 
   function abrirDetalhe(x) {
@@ -1317,7 +1424,7 @@ nav.abas button[hidden]{display:none!important}
     if (!aba) return;
     if (EH_CLIENTE && aba !== 'perfil') aba = 'resumo';
     ABA_ATUAL = aba;
-    ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl'].forEach(function (a) {
+    ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'todas'].forEach(function (a) {
       $('painel-' + a).hidden = a !== aba;
     });
     Array.prototype.forEach.call(document.querySelectorAll('nav.abas button'), function (b) {
@@ -1328,6 +1435,7 @@ nav.abas button[hidden]{display:none!important}
     fecharMenu();
     fecharCores();
     if (aba === 'ctl') montarCtl();
+    if (aba === 'todas') abrirTodas();
     if (aba === 'resumo') abrirResumo();
     if (aba === 'perfil') abrirPerfil();
     $('corpo').scrollTop = 0;
