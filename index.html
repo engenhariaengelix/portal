@@ -112,6 +112,11 @@ button.tarefa{width:100%;background:none;border:0;border-top:1px solid #e1e6ec;p
 .det .rev button{width:38px;height:38px;border:1px solid #c4ccd6;border-radius:8px;background:#fff;color:#1f3a5f;font-size:20px;line-height:1}
 .det .mini{align-self:flex-start;background:#1f3a5f;color:#fff;border:0;border-radius:8px;padding:7px 16px;font-size:14px;margin-top:6px}
 #det-campos.salvando{opacity:.55;pointer-events:none}
+#folha-cad{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
+#folha-cad[hidden]{display:none}
+#folha-cad .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px;max-height:90dvh;overflow:auto}
+.cad-erro{color:#b03a2e;font-size:13px;margin-top:8px;min-height:1px}
+.det details summary{padding:6px 0}
 
 /* SENHA (alterar / esqueci) */
 #folha-senha{position:fixed;top:0;right:0;bottom:0;left:0;z-index:60;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
@@ -433,6 +438,14 @@ nav.abas button[hidden]{display:none!important}
     <h2 id="det-titulo"></h2>
     <div id="det-campos"></div>
     <button class="sair" id="fechar-tarefa" type="button" style="margin-top:12px">Fechar</button>
+  </div>
+</div>
+
+<div id="folha-cad" hidden>
+  <div class="conteudo">
+    <h2 id="cad-titulo"></h2>
+    <div id="cad-corpo"></div>
+    <button class="sair" id="fechar-cad" type="button" style="margin-top:12px">Fechar</button>
   </div>
 </div>
 
@@ -1016,6 +1029,127 @@ nav.abas button[hidden]{display:none!important}
     });
   }
 
+  /* Cadastros do Controle (pleno e gerência) */
+  var PAPEL_ENG = '';
+  function papelEngDe(u) {
+    var e = ((u && u.empresas) || []).filter(function (x) { return x.id === 'engenharia'; })[0];
+    return e ? e.papel : '';
+  }
+  function ehGestor() { return PAPEL_ENG === 'pleno' || PAPEL_ENG === 'gerencia'; }
+  function cadErro(msg) { var e = $('cad-erro'); if (e) e.textContent = msg || ''; else if (msg) avisar(msg); }
+  function cadCampo(rot, el) {
+    var d = document.createElement('div'); d.className = 'det';
+    var s = document.createElement('small'); s.textContent = rot;
+    d.appendChild(s); d.appendChild(el); $('cad-corpo').appendChild(d);
+    return el;
+  }
+  function cadInput(rot, ph, lista) {
+    var i = document.createElement('input'); i.type = 'text'; i.autocomplete = 'off';
+    if (ph) i.placeholder = ph;
+    if (lista) i.setAttribute('list', lista);
+    return cadCampo(rot, i);
+  }
+  function cadSelect(rot, opcoes, padrao) {
+    var s = document.createElement('select');
+    opcoes.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o); });
+    if (padrao && opcoes.indexOf(padrao) >= 0) s.value = padrao;
+    return cadCampo(rot, s);
+  }
+  function cadBotao(txt, fn) {
+    var d = document.createElement('div'); d.className = 'det';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = txt;
+    b.addEventListener('click', function () { b.disabled = true; fn(function () { b.disabled = false; }); });
+    var er = document.createElement('div'); er.className = 'cad-erro'; er.id = 'cad-erro';
+    d.appendChild(b); d.appendChild(er); $('cad-corpo').appendChild(d);
+  }
+  function cadFechar() { $('folha-cad').hidden = true; }
+  function cadTratar(e, liberar) {
+    if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
+    cadErro(e && e.message ? e.message : 'Não foi possível concluir.');
+    if (liberar) liberar();
+  }
+  function abrirCad(tipo) {
+    if (!ehGestor()) return;
+    $('cad-corpo').innerHTML = '';
+    $('folha-cad').hidden = false;
+    if (tipo === 'x-imoveis') cadImoveis();
+    else if (tipo === 'x-novoimovel') cadNovoImovel();
+    else if (tipo === 'x-novatarefa') cadNovaTarefa();
+  }
+  function cadImoveis() {
+    $('cad-titulo').textContent = 'Dados das edificações';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    api({ acao: 'imoveis', token: TOKEN }).then(function (d) {
+      corpo.innerHTML = '';
+      var busca = cadInput('Buscar edificação', 'Digite parte do nome');
+      var lista = document.createElement('div'); corpo.appendChild(lista);
+      function desenhar() {
+        var q = busca.value.trim().toLowerCase(); lista.innerHTML = '';
+        var itens = d.imoveis.filter(function (x) { return !q || x.obra.toLowerCase().indexOf(q) >= 0; });
+        if (!itens.length) { lista.innerHTML = '<div class="vazio">Nenhuma edificação encontrada.</div>'; return; }
+        itens.forEach(function (x) {
+          var det = document.createElement('details'); det.className = 'det';
+          var sm = document.createElement('summary');
+          sm.style.cssText = 'font-size:15px;font-weight:bold;color:#1f3a5f;cursor:pointer';
+          sm.textContent = x.obra + (x.finalizada ? ' (finalizada)' : '');
+          det.appendChild(sm);
+          [['Endereço', x.endereco], ['CEP', x.cep], ['Inscrição imobiliária', x.inscricao], ['Matrícula', x.matricula], ['Proprietário', x.proprietario]].forEach(function (p) {
+            var l = document.createElement('div'); l.style.marginTop = '6px';
+            var a = document.createElement('small'); a.style.display = 'block'; a.textContent = p[0];
+            var b = document.createElement('span'); b.textContent = p[1] || '—';
+            l.appendChild(a); l.appendChild(b); det.appendChild(l);
+          });
+          lista.appendChild(det);
+        });
+      }
+      busca.addEventListener('input', desenhar); desenhar();
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function cadNovoImovel() {
+    $('cad-titulo').textContent = 'Cadastrar imóvel';
+    var f = {};
+    f.obra = cadInput('Obra (nome)'); f.endereco = cadInput('Endereço'); f.cep = cadInput('CEP');
+    f.inscricao = cadInput('Inscrição imobiliária'); f.matricula = cadInput('Matrícula'); f.proprietario = cadInput('Proprietário');
+    cadBotao('Cadastrar', function (liberar) {
+      cadErro('');
+      var corpo = { acao: 'cadastrarImovel', token: TOKEN };
+      for (var k in f) corpo[k] = f[k].value;
+      api(corpo).then(function () {
+        try { localStorage.removeItem(CHAVE_LISTAS); } catch (e) {}
+        detListas = null; ultimoResumo = 0;
+        cadFechar(); avisar('Imóvel cadastrado.');
+      }).catch(function (e) { cadTratar(e, liberar); });
+    });
+  }
+  function cadNovaTarefa() {
+    $('cad-titulo').textContent = 'Cadastrar tarefa';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    api({ acao: 'listas', token: TOKEN }).then(function (L) {
+      corpo.innerHTML = '';
+      var f = {};
+      f.obra = cadSelect('Edificação', L.obras);
+      f.disciplina = cadSelect('Disciplina', L.disciplinas);
+      f.tarefa = cadInput('Tarefa', 'Escolha ou digite', 'cad-lista-tarefas');
+      var dl = document.createElement('datalist'); dl.id = 'cad-lista-tarefas';
+      L.tarefas.forEach(function (t) { var o = document.createElement('option'); o.value = t; dl.appendChild(o); });
+      corpo.appendChild(dl);
+      f.revisao = cadInput('Revisão atual'); f.revisao.value = 'Rev 00';
+      f.responsavel = cadSelect('Responsável', L.responsaveis);
+      f.apoio = cadSelect('Apoio', ['-'].concat(L.responsaveis));
+      f.situacao = cadSelect('Situação inicial', L.situacoes, 'A iniciar');
+      cadBotao('Cadastrar', function (liberar) {
+        cadErro('');
+        var c = { acao: 'cadastrarTarefa', token: TOKEN };
+        for (var k in f) c[k] = f[k].value;
+        api(c).then(function () {
+          ultimoResumo = 0; carregarTarefas();
+          cadFechar(); avisar('Tarefa cadastrada.');
+        }).catch(function (e) { cadTratar(e, liberar); });
+      });
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  $('fechar-cad').addEventListener('click', cadFechar);
+
   /* Detalhe (editável conforme o perfil) */
   var CHAVE_LISTAS = 'engelix_listas', DET = null, detListas = null;
   var CAMPOS_FIXOS = [['Dependência', 'dependencia'], ['Início da produção', 'inicio'], ['Fim da produção', 'fim'], ['Dias de produção', 'dias']];
@@ -1360,6 +1494,11 @@ nav.abas button[hidden]{display:none!important}
     else {
       itens.push(['perfil', 'Perfil']);
       if (temCtl) itens.push(['tarefas', 'Controle de projetos']);
+      if (temCtl && ehGestor()) {
+        itens.push(['x-imoveis', '   · Dados das edificações']);
+        itens.push(['x-novoimovel', '   · Cadastrar imóvel']);
+        itens.push(['x-novatarefa', '   · Cadastrar tarefa']);
+      }
       if (temApps) itens.push(['apps', 'Aplicativos']);
     }
     m.innerHTML = '';
@@ -1386,6 +1525,7 @@ nav.abas button[hidden]{display:none!important}
   $('menu-app').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-ir]');
     if (!b) return;
+    if (/^x-/.test(b.getAttribute('data-ir'))) { fecharMenu(); abrirCad(b.getAttribute('data-ir')); return; }
     if (b.getAttribute('data-ir') === 'completo') {
       fecharMenu();
       var sc = sistemaPorId('controle');
@@ -1489,6 +1629,7 @@ nav.abas button[hidden]{display:none!important}
     desenharNotifs();
     carregarTarefas();
     EH_CLIENTE = souCliente(dados.usuario);
+    PAPEL_ENG = papelEngDe(dados.usuario);
     usarCacheResumo(nome);
     desenharResumo();
     carregarResumo();
