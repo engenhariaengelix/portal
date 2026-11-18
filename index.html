@@ -1420,10 +1420,26 @@ nav.abas button[hidden]{display:none!important}
   });
 
   /* ---------- ABAS (CELULAR) ---------- */
+  /* lembra a última tela até o fim do dia (para reabrir após recarregar) */
+  var CHAVE_ABA = 'engelix_aba';
+  function hojeStr() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function guardarAba(aba) {
+    try { localStorage.setItem(CHAVE_ABA, JSON.stringify({ aba: aba, dia: hojeStr() })); } catch (e) {}
+  }
+  function abaSalva() {
+    try {
+      var o = JSON.parse(localStorage.getItem(CHAVE_ABA) || 'null');
+      if (!o || o.dia !== hojeStr()) return '';
+      if (['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl'].indexOf(o.aba) < 0 && !(o.aba === 'todas' && ehGestor())) return '';
+      return o.aba;
+    } catch (e) { return ''; }
+  }
+
   function irPara(aba) {
     if (!aba) return;
     if (EH_CLIENTE && aba !== 'perfil') aba = 'resumo';
     ABA_ATUAL = aba;
+    guardarAba(aba);
     ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'todas'].forEach(function (a) {
       $('painel-' + a).hidden = a !== aba;
     });
@@ -1800,7 +1816,7 @@ nav.abas button[hidden]{display:none!important}
     desenharResumo();
     carregarResumo();
     montarMenu();
-    if (!manterAba || EH_CLIENTE) irPara(EH_CLIENTE ? 'resumo' : 'inicio');
+    if (!manterAba || EH_CLIENTE) irPara(EH_CLIENTE ? 'resumo' : (abaSalva() || 'inicio'));
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
     if (!EH_CLIENTE) iniciarPreCarga();
@@ -1814,6 +1830,7 @@ nav.abas button[hidden]{display:none!important}
     apagar(CHAVE_TAREFAS);
     apagar(CHAVE_PERFIL); PERFIL = null;
     apagar(CHAVE_RESUMO); RESUMO = null; ultimoResumo = 0; ABERTAS = {}; EH_CLIENTE = false;
+    apagar(CHAVE_ABA);
     document.body.className = document.body.className.replace(/\baba-\S+/g, '').trim();
     TAREFAS = []; TAREFAS_OK = false; fObra = ''; fDisc = ''; fSit = '';
     mostrarLogin(msg);
