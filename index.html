@@ -75,7 +75,7 @@ h2{margin:0;font-size:18px;color:#222}
 .avatar{width:72px;height:72px;border-radius:36px;background:#1f3a5f;color:#fff;font-size:30px;font-weight:bold;display:flex;align-items:center;justify-content:center;margin:0 auto}
 .perfil{align-items:center;text-align:center}
 .sair{min-height:48px;border-radius:6px;border:2px solid #1f3a5f;background:#fff;color:#1f3a5f;font-size:16px;font-weight:bold;width:100%}
-nav.abas{background:#fff;border-top:1px solid #c4ccd6;display:flex;padding:8px 12px calc(10px + env(safe-area-inset-bottom))}
+nav.abas{background:#fff;border-top:1px solid #c4ccd6;display:flex;padding:8px 12px max(10px, calc(env(safe-area-inset-bottom) - 14px))}
 nav.abas button{flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:#4f5d6b;font-size:12px}
 nav.abas button.on{color:#1f3a5f;font-weight:bold}
 #aviso{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;max-width:90%;text-align:center}
@@ -1105,7 +1105,7 @@ nav.abas button[hidden]{display:none!important}
     var t = document.createElement('div');
     t.className = 't';
     var a = document.createElement('span'); a.textContent = x.tarefa;
-    var b = document.createElement('span'); b.textContent = (x.disciplina ? x.disciplina + ' · ' : '') + x.situacao;
+    var b = document.createElement('span'); b.textContent = (x.disciplina ? x.disciplina + ' · ' : '') + x.situacao + (x.obraFinalizada ? ' · obra finalizada' : '');
     t.appendChild(a); t.appendChild(b);
     var q = document.createElement('span');
     q.className = 'etq ' + (x.papel || 'resp');
@@ -1174,7 +1174,7 @@ nav.abas button[hidden]{display:none!important}
       box.appendChild(s);
     });
     var l = document.createElement('label'); l.style.cssText = 'grid-column:1 / -1;font-size:13px;color:#4f5d6b;display:flex;gap:8px;align-items:center';
-    var c = document.createElement('input'); c.type = 'checkbox';
+    var c = document.createElement('input'); c.type = 'checkbox'; c.checked = true; FT.enc = true;
     c.addEventListener('change', function () { FT.enc = c.checked; desenharTodas(); });
     l.appendChild(c); l.appendChild(document.createTextNode('Incluir encerradas e obras finalizadas'));
     box.appendChild(l);
