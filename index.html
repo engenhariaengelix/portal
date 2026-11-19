@@ -879,6 +879,31 @@ nav.abas button[hidden]{display:none!important}
     var d = new Date(ms), z = function (n) { return (n < 10 ? '0' : '') + n; };
     return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
   }
+  /* Tocar num aviso de tarefa abre o editor dessa tarefa */
+  function acharTarefaDoAviso(n) {
+    var melhor = null, tam = 0, txt = n.texto || '';
+    [TAREFAS || [], TODAS || []].forEach(function (lista) {
+      lista.forEach(function (x) {
+        var rot = x.obra + ' \u00b7 ' + x.disciplina + ' \u00b7 ' + x.tarefa;
+        if (txt.indexOf(rot) >= 0 && rot.length > tam) { melhor = x; tam = rot.length; }
+      });
+    });
+    return melhor;
+  }
+  function abrirTarefaDoAviso(n, jaTentou) {
+    if (n.tipo === 'obra') return;
+    if (n.tipo === 'exclusao') { avisar('Essa tarefa foi exclu\u00edda.'); return; }
+    var x = acharTarefaDoAviso(n);
+    if (x) { $('folha-notif').hidden = true; abrirDetalhe(x); return; }
+    if (!jaTentou && TOKEN) {
+      api({ acao: ehGestor() ? 'todasTarefas' : 'tarefas', token: TOKEN }).then(function (d) {
+        if (ehGestor()) TODAS = d.tarefas; else TAREFAS = d.tarefas || TAREFAS;
+        abrirTarefaDoAviso(n, true);
+      }).catch(function () { avisar('N\u00e3o consegui abrir a tarefa agora. Tente de novo.'); });
+      return;
+    }
+    avisar('N\u00e3o encontrei essa tarefa (pode ter sido alterada).');
+  }
   function desenharNotifs() {
     ['lista-notif-pc', 'lista-notif-cel'].forEach(function (id) {
       var box = $(id);
@@ -896,7 +921,7 @@ nav.abas button[hidden]{display:none!important}
         var b = document.createElement('span'); b.textContent = (n.autor ? 'por ' + n.autor + ' · ' : '') + quandoTxt(n.quando);
         t.appendChild(a); t.appendChild(c); t.appendChild(b);
         d.appendChild(p); d.appendChild(t);
-        d.addEventListener('click', function () { if (!n.lida) marcarLidas([n.id]); });
+        d.addEventListener('click', function () { if (!n.lida) marcarLidas([n.id]); abrirTarefaDoAviso(n); });
         box.appendChild(d);
       });
     });
