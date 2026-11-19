@@ -81,6 +81,7 @@ nav.abas button.on{color:#1f3a5f;font-weight:bold}
 #aviso{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;max-width:90%;text-align:center}
 #folha-notif{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
 #folha-notif .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px}
+.nlink{align-self:flex-start;background:none;border:0;color:#1f3a5f;font-size:12px;text-decoration:underline;padding:4px 0;cursor:pointer}
 .ni{display:flex;gap:10px;align-items:flex-start;border-top:1px solid #e1e6ec;padding-top:8px;margin-top:8px}
 .ni i{flex:none;width:8px;height:8px;border-radius:4px;background:#b03a2e;margin-top:6px}
 .ni div{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -315,7 +316,7 @@ nav.abas button[hidden]{display:none!important}
     <div class="saud cel"><small id="saudacao">Olá,</small><strong id="nome-topo"></strong></div>
     <button class="sino cel" id="sino" type="button" aria-label="Notificações">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-      <span class="badge" id="badge-cel">3</span>
+      <span class="badge" id="badge-cel" style="display:none">0</span>
     </button>
     <img class="logo-pc pc" src="logo-branco.png" alt="ENGELIX">
     <div class="usr-pc pc">
@@ -334,7 +335,8 @@ nav.abas button[hidden]{display:none!important}
       <h2><span class="cel">Sistemas</span><span class="pc titulo-pc" id="titulo-pc">ENGELIX</span></h2>
       <div class="grade" id="grade"></div>
       <section class="caixa-notif pc">
-        <div class="nh"><span>Notificações <span class="exemplo">(exemplos)</span></span><span class="nb" id="badge-pc">3</span></div>
+        <div class="nh"><span>Notificações</span><span class="nb" id="badge-pc" style="display:none">0</span></div>
+        <button class="nlink" id="lidas-pc" type="button">Marcar todas como lidas</button>
         <div id="lista-notif-pc"></div>
       </section>
       <div class="cartao" id="cartao-inicio">
@@ -444,8 +446,9 @@ nav.abas button[hidden]{display:none!important}
 
 <div id="folha-notif" hidden>
   <div class="conteudo">
-    <h2>Notificações <span class="exemplo">(exemplos)</span></h2>
-    <div id="lista-notif-cel"></div>
+    <h2>Notificações</h2>
+    <button class="nlink" id="lidas-cel" type="button">Marcar todas como lidas</button>
+    <div id="lista-notif-cel" style="max-height:55vh;overflow:auto"></div>
     <button class="sair" id="fechar-notif" type="button" style="margin-top:12px">Fechar</button>
   </div>
 </div>
@@ -492,11 +495,7 @@ nav.abas button[hidden]{display:none!important}
   var fObra = '', fDisc = '', fSit = '';
   var carregandoTarefas = false;
 
-  var NOTIFS = [
-    ['Tarefa atribuída a você', '[Projeto] · há 10 min'],
-    ['Nova entrega registrada', '[Projeto] · há 1 h'],
-    ['Notificação de exemplo', 'ontem']
-  ];
+  var NOTIFS = [], NAO_LIDAS = 0, notifTimer = 0;
 
   var FILTROS = [['todas', 'Todas'], ['resp', 'Responsável'], ['apoio', 'Apoio']];
   var filtro = 'todas';
@@ -869,24 +868,61 @@ nav.abas button[hidden]{display:none!important}
   }
 
   /* ---------- NOTIFICAÇÕES ---------- */
+  function quandoTxt(ms) {
+    if (!ms) return '';
+    var m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return 'agora';
+    if (m < 60) return 'há ' + m + ' min';
+    if (m < 1440) return 'há ' + Math.round(m / 60) + ' h';
+    var d = new Date(ms), z = function (n) { return (n < 10 ? '0' : '') + n; };
+    return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+  }
   function desenharNotifs() {
     ['lista-notif-pc', 'lista-notif-cel'].forEach(function (id) {
       var box = $(id);
       box.innerHTML = '';
+      if (!NOTIFS.length) { box.innerHTML = '<div class="vazio">Nenhuma notificação.</div>'; return; }
       NOTIFS.forEach(function (n) {
         var d = document.createElement('div');
         d.className = 'ni';
+        d.style.cursor = n.lida ? 'default' : 'pointer';
         var p = document.createElement('i');
+        if (n.lida) p.style.visibility = 'hidden';
         var t = document.createElement('div');
-        var a = document.createElement('span'); a.textContent = n[0];
-        var b = document.createElement('span'); b.textContent = n[1];
-        t.appendChild(a); t.appendChild(b);
+        var a = document.createElement('span'); a.textContent = n.titulo; if (!n.lida) a.style.fontWeight = 'bold';
+        var c = document.createElement('span'); c.textContent = n.texto; c.style.cssText = 'font-size:13px;color:#333';
+        var b = document.createElement('span'); b.textContent = (n.autor ? 'por ' + n.autor + ' · ' : '') + quandoTxt(n.quando);
+        t.appendChild(a); t.appendChild(c); t.appendChild(b);
         d.appendChild(p); d.appendChild(t);
+        d.addEventListener('click', function () { if (!n.lida) marcarLidas([n.id]); });
         box.appendChild(d);
       });
     });
-    $('badge-cel').textContent = NOTIFS.length;
-    $('badge-pc').textContent = NOTIFS.length;
+    ['badge-cel', 'badge-pc'].forEach(function (id) {
+      var e = $(id);
+      e.textContent = NAO_LIDAS > 99 ? '99+' : NAO_LIDAS;
+      e.style.display = NAO_LIDAS ? 'flex' : 'none';
+    });
+  }
+  function carregarNotifs() {
+    if (!TOKEN || EH_CLIENTE) return;
+    if (!notifTimer) {
+      notifTimer = setInterval(function () {
+        if (!document.hidden && TOKEN && !$('tela-app').hidden) carregarNotifs();
+      }, 90000);
+    }
+    api({ acao: 'notificacoes', token: TOKEN }).then(function (d) {
+      NOTIFS = d.itens || []; NAO_LIDAS = d.naoLidas || 0; desenharNotifs();
+    }).catch(function (e) { if (e && e.message === 'SESSAO_INVALIDA') tratarErro(e); });
+  }
+  function marcarLidas(ids) {
+    var todas = !ids;
+    NOTIFS.forEach(function (n) {
+      if (todas || ids.indexOf(n.id) >= 0) { if (!n.lida && !todas) NAO_LIDAS = Math.max(0, NAO_LIDAS - 1); n.lida = true; }
+    });
+    if (todas) NAO_LIDAS = 0;
+    desenharNotifs();
+    api({ acao: 'marcarLidas', token: TOKEN, ids: ids || [], todas: todas }).catch(function () {});
   }
 
   /* ---------- TAREFAS ---------- */
@@ -1212,12 +1248,39 @@ nav.abas button[hidden]{display:none!important}
           sm.style.cssText = 'font-size:15px;font-weight:bold;color:#1f3a5f;cursor:pointer';
           sm.textContent = x.obra + (x.finalizada ? ' (finalizada)' : '');
           det.appendChild(sm);
+          det.open = !!x.aberto;
+          det.addEventListener('toggle', function () { x.aberto = det.open; });
           [['Endereço', x.endereco], ['CEP', x.cep], ['Inscrição imobiliária', x.inscricao], ['Matrícula', x.matricula], ['Proprietário', x.proprietario]].forEach(function (p) {
             var l = document.createElement('div'); l.style.marginTop = '6px';
             var a = document.createElement('small'); a.style.display = 'block'; a.textContent = p[0];
             var b = document.createElement('span'); b.textContent = p[1] || '—';
             l.appendChild(a); l.appendChild(b); det.appendChild(l);
           });
+          var fim = document.createElement('div'); fim.style.cssText = 'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap';
+          function botaoFim(txt, fn, cinza) {
+            var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'mini'; bt.textContent = txt;
+            if (cinza) bt.style.background = '#6b7785';
+            bt.addEventListener('click', fn); fim.appendChild(bt); return bt;
+          }
+          function fimInicio() {
+            fim.innerHTML = '';
+            botaoFim(x.finalizada ? 'Reabrir obra' : 'Finalizar obra', fimConfirma);
+          }
+          function fimConfirma() {
+            fim.innerHTML = '';
+            var q = document.createElement('small'); q.style.cssText = 'display:block;width:100%'; q.textContent = (x.finalizada ? 'Reabrir ' : 'Finalizar ') + x.obra + '? Quem trabalha nela será avisado.';
+            fim.appendChild(q);
+            var sim = botaoFim(x.finalizada ? 'Sim, reabrir' : 'Sim, finalizar', function () {
+              sim.disabled = true;
+              api({ acao: 'finalizarObra', token: TOKEN, obra: x.obra, finalizar: !x.finalizada }).then(function (r) {
+                x.finalizada = !!r.finalizada; x.aberto = true; ultimoResumo = 0; TODAS = null;
+                desenhar(); avisar(x.finalizada ? 'Obra finalizada.' : 'Obra reaberta.');
+              }).catch(function (e) { sim.disabled = false; tratarErro(e); });
+            });
+            botaoFim('Cancelar', fimInicio, true);
+          }
+          fimInicio();
+          det.appendChild(fim);
           lista.appendChild(det);
         });
       }
@@ -1416,7 +1479,7 @@ nav.abas button[hidden]{display:none!important}
   }
 
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden && TOKEN && !$('tela-app').hidden) carregarTarefas();
+    if (!document.hidden && TOKEN && !$('tela-app').hidden) { carregarTarefas(); carregarNotifs(); }
   });
 
   /* ---------- ABAS (CELULAR) ---------- */
@@ -1812,6 +1875,7 @@ nav.abas button[hidden]{display:none!important}
     carregarTarefas();
     EH_CLIENTE = souCliente(dados.usuario);
     PAPEL_ENG = papelEngDe(dados.usuario);
+    carregarNotifs();
     usarCacheResumo(nome);
     desenharResumo();
     carregarResumo();
@@ -1831,6 +1895,7 @@ nav.abas button[hidden]{display:none!important}
     apagar(CHAVE_PERFIL); PERFIL = null;
     apagar(CHAVE_RESUMO); RESUMO = null; ultimoResumo = 0; ABERTAS = {}; EH_CLIENTE = false;
     apagar(CHAVE_ABA);
+    NOTIFS = []; NAO_LIDAS = 0; if (notifTimer) { clearInterval(notifTimer); notifTimer = 0; }
     document.body.className = document.body.className.replace(/\baba-\S+/g, '').trim();
     TAREFAS = []; TAREFAS_OK = false; fObra = ''; fDisc = ''; fSit = '';
     mostrarLogin(msg);
@@ -1914,7 +1979,9 @@ nav.abas button[hidden]{display:none!important}
     });
   });
 
-  $('sino').addEventListener('click', function () { $('folha-notif').hidden = false; });
+  $('sino').addEventListener('click', function () { $('folha-notif').hidden = false; carregarNotifs(); });
+  $('lidas-cel').addEventListener('click', function () { marcarLidas(null); });
+  $('lidas-pc').addEventListener('click', function () { marcarLidas(null); });
   $('fechar-notif').addEventListener('click', function () { $('folha-notif').hidden = true; });
   $('folha-notif').addEventListener('click', function (e) {
     if (e.target === this) this.hidden = true;
