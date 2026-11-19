@@ -45,3 +45,24 @@ self.addEventListener('fetch', function (e) {
     })
   );
 });
+
+// Avisos (Firebase Cloud Messaging): mostra a notificação quando chega um aviso, mesmo com o app fechado.
+self.addEventListener('push', function (e) {
+  var p = {};
+  try { p = e.data ? e.data.json() : {}; } catch (x) {}
+  var d = p.data || {}, n = p.notification || {};
+  var titulo = d.titulo || n.title || 'ENGELIX';
+  var corpo = d.texto || n.body || '';
+  e.waitUntil(self.registration.showNotification(titulo, {
+    body: corpo, icon: 'icon-192.png', badge: 'icon-192.png', data: { link: d.link || './' }
+  }));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var alvo = (e.notification.data && e.notification.data.link) || './';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (lista) {
+    for (var i = 0; i < lista.length; i++) { if ('focus' in lista[i]) return lista[i].focus(); }
+    return self.clients.openWindow(alvo);
+  }));
+});

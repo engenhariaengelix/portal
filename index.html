@@ -337,6 +337,7 @@ nav.abas button[hidden]{display:none!important}
       <section class="caixa-notif pc">
         <div class="nh"><span>Notificações</span><span class="nb" id="badge-pc" style="display:none">0</span></div>
         <button class="nlink" id="lidas-pc" type="button">Marcar todas como lidas</button>
+        <button class="nlink" id="push-pc" type="button">Ativar avisos neste aparelho</button>
         <div id="lista-notif-pc"></div>
       </section>
       <div class="cartao" id="cartao-inicio">
@@ -448,6 +449,7 @@ nav.abas button[hidden]{display:none!important}
   <div class="conteudo">
     <h2>Notificações</h2>
     <button class="nlink" id="lidas-cel" type="button">Marcar todas como lidas</button>
+    <button class="nlink" id="push-cel" type="button">Ativar avisos neste aparelho</button>
     <div id="lista-notif-cel" style="max-height:55vh;overflow:auto"></div>
     <button class="sair" id="fechar-notif" type="button" style="margin-top:12px">Fechar</button>
   </div>
@@ -904,6 +906,62 @@ nav.abas button[hidden]{display:none!important}
       e.style.display = NAO_LIDAS ? 'flex' : 'none';
     });
   }
+  /* ---------- AVISOS NO CELULAR (Firebase Cloud Messaging) ---------- */
+  var FB_CFG = { apiKey: 'AIzaSyBgJ9Zcvw8Kl5oymHhPZUvR0jyfTJBXqfk', authDomain: 'engelix-app.firebaseapp.com', projectId: 'engelix-app',
+                 storageBucket: 'engelix-app.firebasestorage.app', messagingSenderId: '1045406368289', appId: '1:1045406368289:web:bf6214579d9f18aaaad960' };
+  var FB_VAPID = 'BIaxZwJjQNDojYVw3R4vbjFo08xdl9cWn2tOz0Wpp9U2lYx_RL0Cto4IQRd0TMBAa2kIm-IHQdWVQ3L363b8pZs';
+  var CHAVE_PUSH = 'engelix_push';   // { tk, nome, t }
+  function nomeAtual() { return ($('nome-topo').textContent || '').trim(); }
+  function pushSuportado() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function lerPush() { try { return JSON.parse(localStorage.getItem(CHAVE_PUSH) || 'null') || {}; } catch (e) { return {}; } }
+  function carregarScriptExterno(src) {
+    return new Promise(function (ok, erro) {
+      var s = document.createElement('script'); s.src = src; s.onload = ok;
+      s.onerror = function () { erro(new Error('Não foi possível carregar o serviço de avisos. Verifique a internet.')); };
+      document.head.appendChild(s);
+    });
+  }
+  function pegarTokenPush() {
+    return carregarScriptExterno('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js')
+      .then(function () { return carregarScriptExterno('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js'); })
+      .then(function () { if (!firebase.apps.length) firebase.initializeApp(FB_CFG); return navigator.serviceWorker.ready; })
+      .then(function (reg) { return firebase.messaging().getToken({ vapidKey: FB_VAPID, serviceWorkerRegistration: reg }); });
+  }
+  function registrarPush(tk, nome) {
+    return api({ acao: 'registrarAparelho', token: TOKEN, fcm: tk, plataforma: aparelho() }).then(function () {
+      try { localStorage.setItem(CHAVE_PUSH, JSON.stringify({ tk: tk, nome: nome, t: Date.now() })); } catch (e) {}
+      atualizarBotoesPush();
+    });
+  }
+  function atualizarBotoesPush() {
+    var ativo = pushSuportado() && Notification.permission === 'granted' && !!lerPush().tk;
+    ['push-cel', 'push-pc'].forEach(function (id) { $(id).hidden = ativo; });
+  }
+  function ativarPush() {
+    if (!pushSuportado()) {
+      avisar(/iPhone|iPad/.test(navigator.userAgent || '')
+        ? 'No iPhone, instale o app na tela inicial (Compartilhar > Adicionar à Tela de Início) e abra por lá.'
+        : 'Este aparelho não permite avisos.');
+      return;
+    }
+    Notification.requestPermission().then(function (p) {
+      if (p !== 'granted') throw new Error('Permissão negada. Libere as notificações do ENGELIX nas configurações do aparelho.');
+      return pegarTokenPush();
+    }).then(function (tk) {
+      if (!tk) throw new Error('Não foi possível ativar os avisos.');
+      return registrarPush(tk, nomeAtual()).then(function () { avisar('Avisos ativados neste aparelho.'); });
+    }).catch(function (e) { tratarErro(e); });
+  }
+  /* mantém o aparelho cadastrado (ao abrir o app, se a permissão já foi dada) */
+  function manterPush() {
+    if (!TOKEN || EH_CLIENTE || !pushSuportado() || Notification.permission !== 'granted') { atualizarBotoesPush(); return; }
+    var antes = lerPush(), nome = nomeAtual();
+    if (antes.tk && antes.nome === nome && Date.now() - (antes.t || 0) < 3 * 86400000) { atualizarBotoesPush(); return; }
+    pegarTokenPush().then(function (tk) { if (tk) return registrarPush(tk, nome); }).catch(function () {});
+  }
+  $('push-cel').addEventListener('click', ativarPush);
+  $('push-pc').addEventListener('click', ativarPush);
+
   function carregarNotifs() {
     if (!TOKEN || EH_CLIENTE) return;
     if (!notifTimer) {
@@ -1874,6 +1932,7 @@ nav.abas button[hidden]{display:none!important}
     EH_CLIENTE = souCliente(dados.usuario);
     PAPEL_ENG = papelEngDe(dados.usuario);
     carregarNotifs();
+    manterPush();
     usarCacheResumo(nome);
     desenharResumo();
     carregarResumo();
@@ -1893,6 +1952,7 @@ nav.abas button[hidden]{display:none!important}
     apagar(CHAVE_PERFIL); PERFIL = null;
     apagar(CHAVE_RESUMO); RESUMO = null; ultimoResumo = 0; ABERTAS = {}; EH_CLIENTE = false;
     apagar(CHAVE_ABA);
+    apagar(CHAVE_PUSH);
     NOTIFS = []; NAO_LIDAS = 0; if (notifTimer) { clearInterval(notifTimer); notifTimer = 0; }
     document.body.className = document.body.className.replace(/\baba-\S+/g, '').trim();
     TAREFAS = []; TAREFAS_OK = false; fObra = ''; fDisc = ''; fSit = '';
@@ -1900,8 +1960,9 @@ nav.abas button[hidden]{display:none!important}
   }
 
   function sair() {
-    var t = TOKEN;
+    var t = TOKEN, pk = lerPush().tk;
     sairLocal();
+    if (t && pk) api({ acao: 'removerAparelho', token: t, fcm: pk }).catch(function () {});
     if (t) api({ acao: 'sair', token: t }).catch(function () {});
   }
 
