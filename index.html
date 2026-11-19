@@ -277,6 +277,29 @@ nav.abas button[hidden]{display:none!important}
 .pf-nome .ico-btn{width:34px;height:34px}
 .pf-acoes{display:flex;gap:8px;justify-content:center;width:100%}
 .painel.perfil .sair{width:auto;min-height:38px;font-size:14px;padding:0 20px}
+/* AJUSTES DE USO (19/11): toque, leitura e tablets */
+.det .mini{min-height:44px;padding:0 16px}
+.todas-f input[type=checkbox]{width:20px;height:20px}
+.etq{font-size:12px}
+.nlink{min-height:44px;display:inline-flex;align-items:center;font-size:14px;padding:0}
+.pf-nome .ico-btn{width:44px;height:44px}
+.painel.perfil .sair{min-height:44px}
+.det .rev button{width:44px;height:44px}
+.det select,.det textarea,.det input{min-height:44px}
+.det textarea{min-height:88px}
+.todas-f select,.todas-f input[type=text],.filtros-campos select,.pf-form input{min-height:44px}
+@media (max-width:479px){.todas-f{grid-template-columns:1fr}}
+@media (pointer:coarse){
+  input,select,textarea{font-size:16px!important}
+  .usr-pc button{min-height:44px;padding:0 10px}
+}
+@media (min-width:600px) and (max-width:899px){
+  .painel{max-width:720px}
+  .corpo{padding:28px 32px 20px}
+  .tarefa .t span:first-child{font-size:16px}
+  .tarefa .t span:last-child,.etq{font-size:13px}
+  nav.abas button{font-size:14px;min-height:56px}
+}
 </style>
 </head>
 <body>
@@ -1996,7 +2019,7 @@ nav.abas button[hidden]{display:none!important}
     desenharResumo();
     carregarResumo();
     montarMenu();
-    if (!manterAba || EH_CLIENTE) irPara(EH_CLIENTE ? 'resumo' : (abaSalva() || 'inicio'));
+    if (!manterAba || EH_CLIENTE || !/\baba-/.test(document.body.className)) irPara(EH_CLIENTE ? 'resumo' : (abaSalva() || 'inicio'));
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
     if (!EH_CLIENTE) iniciarPreCarga();
