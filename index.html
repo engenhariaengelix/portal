@@ -1213,6 +1213,7 @@ nav.abas button[hidden]{display:none!important}
   function cadBotao(txt, fn) {
     var d = document.createElement('div'); d.className = 'det';
     var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = txt;
+    b.style.cssText = 'width:100%;min-height:48px;border-radius:6px;font-size:16px;font-weight:bold';
     b.addEventListener('click', function () { b.disabled = true; fn(function () { b.disabled = false; }); });
     var er = document.createElement('div'); er.className = 'cad-erro'; er.id = 'cad-erro';
     d.appendChild(b); d.appendChild(er); $('cad-corpo').appendChild(d);
@@ -1311,10 +1312,7 @@ nav.abas button[hidden]{display:none!important}
       var f = {};
       f.obra = cadSelect('Edificação', L.obras);
       f.disciplina = cadSelect('Disciplina', L.disciplinas);
-      f.tarefa = cadInput('Tarefa', 'Escolha ou digite', 'cad-lista-tarefas');
-      var dl = document.createElement('datalist'); dl.id = 'cad-lista-tarefas';
-      L.tarefas.forEach(function (t) { var o = document.createElement('option'); o.value = t; dl.appendChild(o); });
-      corpo.appendChild(dl);
+      f.tarefa = L.tarefas.length ? cadSelect('Tarefa', L.tarefas) : cadInput('Tarefa');
       f.revisao = cadInput('Revisão atual'); f.revisao.value = 'Rev 00';
       f.responsavel = cadSelect('Responsável', L.responsaveis);
       f.apoio = cadSelect('Apoio', ['-'].concat(L.responsaveis));
