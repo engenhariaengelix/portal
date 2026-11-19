@@ -300,6 +300,96 @@ nav.abas button[hidden]{display:none!important}
   .tarefa .t span:last-child,.etq{font-size:13px}
   nav.abas button{font-size:14px;min-height:56px}
 }
+
+/* ===== DESIGN ENGELIX (prancha) - versão de aprovação ===== */
+:root{--az:#1f3a5f;--papel:#f4f5f7;--traco:#c4ccd6;--tinta:#222;--cinza:#4f5d6b;--alerta:#b03a2e;--az-claro:#e8edf3;--linha:#dfe4ea}
+body{font-size:16px;line-height:1.4;color:var(--tinta)}
+h2{font-size:24px;font-weight:600;color:var(--az);letter-spacing:.2px}
+:focus-visible{outline:2px solid var(--az);outline-offset:2px}
+.topo :focus-visible,.sis-topo :focus-visible,#tela-login :focus-visible{outline-color:#fff}
+
+/* cabeçalho */
+.topo{border-radius:0 0 14px 14px;padding-bottom:16px}
+.saud small{font-size:14px;color:#cfdae8}
+.saud strong{font-size:23px;font-weight:600;letter-spacing:.2px}
+.sino{border-radius:10px}
+.badge{font-size:12px;font-weight:700}
+.troca{border-radius:8px}
+.troca button{border-radius:6px;font-size:16px;font-weight:600}
+
+/* sistemas */
+.corpo{padding-top:24px}
+.sis .ic{width:76px;height:76px;border-radius:12px;border:1.5px solid var(--az)}
+.sis .nm,.sis{font-size:15px}
+.sis .nm{font-weight:600;color:var(--az);line-height:1.15}
+.sis:active .ic{background:var(--az-claro)}
+
+/* listas de tarefas */
+.cartao{border-radius:8px;border:1px solid var(--traco);padding:16px}
+.cartao-t{font-size:19px;font-weight:600}
+.filtro{border-radius:6px;background:var(--az-claro)}
+.filtro button{border-radius:4px;font-size:15px;font-weight:600}
+.obra-t{font-size:20px;font-weight:700;margin-top:22px;border-bottom:2px solid var(--az)}
+.grupo-tf{font-size:13px;font-weight:600;color:var(--cinza);text-transform:none;letter-spacing:.2px;margin-top:12px}
+button.tarefa,.tarefa{border-top:1px solid var(--linha);padding:12px 0 0;margin-top:12px;gap:12px}
+.tarefa .t span:first-child{font-size:16px;font-weight:600;line-height:1.25;color:var(--tinta)}
+.tarefa .t span:last-child{font-size:13.5px;color:var(--cinza)}
+.etq{border-radius:4px;font-size:12.5px;font-weight:600;padding:5px 9px}
+.etq.apoio{background:#fff;color:var(--az);border:1px solid var(--az)}
+
+/* barra inferior */
+nav.abas{border-top:1px solid var(--traco)}
+nav.abas button{position:relative;font-size:14px;font-weight:500;color:var(--cinza)}
+nav.abas button.on{font-weight:700;color:var(--az)}
+nav.abas button.on::before{content:"";position:absolute;top:-1px;left:50%;width:30px;height:3px;margin-left:-15px;background:var(--az);border-radius:0 0 3px 3px}
+
+/* folhas (sobem da base) */
+#folha-notif .conteudo,#folha-tarefa .conteudo,#folha-cad .conteudo,#folha-senha .conteudo{border-radius:14px 14px 0 0}
+#folha-notif .conteudo::before,#folha-tarefa .conteudo::before,#folha-cad .conteudo::before,#folha-senha .conteudo::before{content:"";align-self:center;width:38px;height:4px;border-radius:2px;background:var(--traco);margin-bottom:10px;flex:none}
+#folha-notif:not([hidden]) .conteudo,#folha-tarefa:not([hidden]) .conteudo,#folha-cad:not([hidden]) .conteudo,#folha-senha:not([hidden]) .conteudo{animation:sobe .22s ease-out}
+@keyframes sobe{from{transform:translateY(28px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#folha-notif .conteudo,#folha-tarefa .conteudo,#folha-cad .conteudo,#folha-senha .conteudo{animation:none!important}}
+.conteudo h2,#det-titulo{font-size:22px;font-weight:600;color:var(--az);line-height:1.15}
+.det small,.pf-form label,#folha-senha label{font-size:13.5px;color:var(--cinza);font-weight:600}
+.det span{font-size:16px}
+.det select,.det textarea,.det input,.todas-f select,.todas-f input[type=text],.filtros-campos select,.pf-form input,#folha-senha input,.campo{border-radius:6px;border-color:var(--traco)}
+.det select:focus,.det textarea:focus,.det input:focus,.pf-form input:focus,#folha-senha input:focus{outline:2px solid var(--az);outline-offset:0;border-color:var(--az)}
+.det .rev button{border-radius:6px;color:var(--az)}
+.det .mini,#pf-salvar{border-radius:6px;font-size:17px;font-weight:600;letter-spacing:.2px}
+.ni div span:first-child{font-size:16px;font-weight:600}
+.ni div span:last-child{font-size:13.5px}
+.nlink{font-size:15px}
+
+/* botões e login */
+.entrar,.sair{border-radius:6px;font-size:18px;font-weight:600;letter-spacing:.3px}
+.caixa{border-radius:6px}
+.caixa h1{font-size:28px;font-weight:600;letter-spacing:.2px}
+.nome{border-radius:6px;font-size:16px}
+.avatar{border-radius:50%;font-weight:600}
+#aviso{border-radius:6px}
+#menu-app{border-radius:8px}
+#menu-app button{font-size:17px;font-weight:600;border-radius:4px}
+
+/* resumo */
+.res-obra{border-radius:8px}
+.res-nome{font-size:19px;font-weight:700}
+.res-faixa{border-radius:3px;height:10px}
+.pill{border-radius:4px;font-size:13px}
+.mat thead th{font-weight:600;font-size:13px}
+#res-cores{border-radius:8px}
+#res-cores button{border-radius:6px}
+
+/* PC e tablet deitado */
+@media (min-width:900px){
+  .sis{border-radius:8px;border:1px solid var(--traco)}
+  .sis .ic{border-radius:12px}
+  .sis .nm{font-size:17px}
+  .caixa-notif{border-radius:8px}
+  .caixa-notif .nh{font-size:18px}
+  #lista-inicio{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  #painel-inicio>h2{font-size:26px}
+}
+
 </style>
 </head>
 <body>
