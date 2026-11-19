@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>ENGELIX</title>
 <meta name="theme-color" content="#1f3a5f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,7 +14,11 @@
 <link rel="icon" href="icon-192.png">
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%}
+html,body{margin:0;height:100%;-webkit-text-size-adjust:100%}
+body:has(#tela-app:not([hidden])){overflow:hidden;overscroll-behavior:none}
+button,select,input,textarea{touch-action:manipulation}
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:16px!important}}
+#puxar{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);transform:translate(-50%,-80px);z-index:70;background:#1f3a5f;color:#fff;font-size:13px;padding:8px 14px;border-radius:16px;pointer-events:none;transition:transform .15s}
 body{font-family:Arial,Helvetica,sans-serif;background:#f4f5f7;color:#222}
 button{font-family:inherit;cursor:pointer}
 [hidden]{display:none!important}
@@ -54,7 +58,8 @@ h2{margin:0;font-size:18px;color:#222}
 .saud strong{font-size:20px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sino{position:relative;width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center}
 .badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:#b03a2e;color:#fff;font-size:11px;font-weight:bold;display:flex;align-items:center;justify-content:center;padding:0 4px}
-.corpo{flex:1;min-height:0;overflow:auto;padding:22px 20px 16px}
+.corpo{flex:1;min-height:0;overflow:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding:22px 20px 16px}
+nav.abas{flex:none}
 .painel{display:flex;flex-direction:column;gap:22px;max-width:520px;margin:0 auto}
 .grade{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 0}
 .sis{grid-column:var(--c);display:flex;flex-direction:column;align-items:center;gap:8px;color:#222;font-size:13px;text-align:center;line-height:1.25;background:none;border:0;padding:0}
@@ -310,6 +315,7 @@ nav.abas button[hidden]{display:none!important}
 </section>
 
 <!-- APP -->
+<div id="puxar" hidden>↓ Puxe para atualizar</div>
 <section id="tela-app" hidden>
   <header class="topo">
     <img class="folha cel" src="folha-branca.png" alt="ENGELIX">
@@ -752,6 +758,7 @@ nav.abas button[hidden]{display:none!important}
 
   function preCarregar() {
     if (!TOKEN || sisAberto) return;
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent || '')) return; /* no iPhone o pré-carregamento pesa demais */
     PRE_SISTEMAS.forEach(function (id, i) {
       setTimeout(function () {
         var s = acharSistema(id);
@@ -1562,6 +1569,33 @@ nav.abas button[hidden]{display:none!important}
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && TOKEN && !$('tela-app').hidden) { carregarTarefas(); carregarNotifs(); }
   });
+
+
+  /* ---------- PUXAR PARA ATUALIZAR (iPhone não tem nativo) ---------- */
+  function atualizarTela() {
+    if (!TOKEN) return;
+    carregarNotifs();
+    if (ABA_ATUAL === 'todas') carregarTodas();
+    else if (ABA_ATUAL === 'resumo') carregarResumo();
+    else carregarTarefas();
+    avisar('Atualizando…');
+  }
+  (function () {
+    var c = $('corpo'), ind = $('puxar'), y0 = null, dy = 0;
+    function mostrar(v, txt) { ind.hidden = false; ind.textContent = txt; ind.style.transform = 'translate(-50%,' + (v - 80) + 'px)'; }
+    function esconder() { ind.style.transform = 'translate(-50%,-80px)'; setTimeout(function () { if (y0 === null) ind.hidden = true; }, 160); }
+    c.addEventListener('touchstart', function (e) { y0 = (c.scrollTop <= 0 && e.touches.length === 1) ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+    c.addEventListener('touchmove', function (e) {
+      if (y0 === null) return;
+      dy = e.touches[0].clientY - y0;
+      if (dy > 12 && c.scrollTop <= 0) mostrar(Math.min(dy * 0.5, 70), dy > 110 ? '↑ Solte para atualizar' : '↓ Puxe para atualizar');
+    }, { passive: true });
+    c.addEventListener('touchend', function () {
+      var vai = y0 !== null && dy > 110 && c.scrollTop <= 0;
+      y0 = null; esconder();
+      if (vai) atualizarTela();
+    }, { passive: true });
+  })();
 
   /* ---------- ABAS (CELULAR) ---------- */
   /* lembra a última tela até o fim do dia (para reabrir após recarregar) */
