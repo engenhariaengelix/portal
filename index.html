@@ -412,8 +412,9 @@ nav.abas button.on::before{background:var(--az-claro)}
 .sis-nome{font-size:20px;font-weight:700}
 
 /* títulos repetidos somem quando há chave seletora */
-#painel-tarefas.com-abas .res-bar h2,#painel-resumo.com-abas .res-bar h2{display:none}
-#painel-tarefas.com-abas .res-bar,#painel-resumo.com-abas .res-bar{justify-content:flex-end}
+#painel-resumo.com-abas .res-bar h2{display:none}
+#painel-resumo.com-abas .res-bar{justify-content:flex-end}
+.bar-obras h2{display:block;font-size:22px}
 .bar-todas h2{display:block}
 .todas-extra{grid-column:1 / -1;display:grid;grid-template-columns:1fr;gap:8px}
 .todas-extra[hidden]{display:none}
@@ -516,8 +517,8 @@ nav.abas button.on::before{background:var(--az-claro)}
     </div>
 
     <div class="painel" id="painel-tarefas" hidden>
-      <div class="res-bar"><h2>Minhas tarefas</h2><button type="button" class="ico-btn" id="btn-filtros" aria-label="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.5V19l4 2v-8.5z"/></svg></button></div>
       <div class="filtro" data-filtro></div>
+      <div class="res-bar bar-obras"><h2>Obras</h2><button type="button" class="ico-btn" id="btn-filtros" aria-label="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.5V19l4 2v-8.5z"/></svg></button></div>
       <div class="filtros-campos" hidden>
         <select id="sel-obra" aria-label="Obra"></select>
         <select id="sel-disc" aria-label="Disciplina"></select>
