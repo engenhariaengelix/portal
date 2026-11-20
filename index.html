@@ -660,6 +660,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     controle: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m9 14 2 2 4-4"/>',
     memoriais: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/>',
     cargatermica: '<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>',
+    elevadores: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="m8 9 4-4 4 4"/><path d="m8 15 4 4 4-4"/>',
     email: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
     diario: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
     geral: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>'
@@ -863,7 +864,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     return SECOES.filter(function (s) { return s.id === empresaSel; })[0] || SECOES[0] || null;
   }
 
-   var ABRE_NO_APP = { controle: true, memoriais: true, cargatermica: true, diario: true };
+   var ABRE_NO_APP = { controle: true, memoriais: true, cargatermica: true, elevadores: true, diario: true };
   var PRE_SISTEMAS = ['controle'];
   var PRE_VALIDADE = 10 * 60 * 1000;
   var sisAberto = false;
