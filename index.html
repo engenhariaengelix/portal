@@ -914,6 +914,17 @@ nav.abas button.on::before{background:var(--az-claro)}
     return FR[s.id];
   }
 
+  /* Telas no GitHub Pages (pasta do app + gas-shim.js): abrem mesmo com várias contas Google no navegador.
+     O link do Apps Script (com ?chave=...) vira <pasta>/?chave=..., e a tela fala com o Apps Script via doPost (Api.gs). */
+  var TELAS_GITHUB = { controle: 'controle/', memoriais: 'memoriais/', elevadores: 'elevadores/' };
+  function telaNoGithub_(id) {
+    return function (d) {
+      if (!TELAS_GITHUB[id] || !d || !d.url) return d;
+      var m = String(d.url).match(/[?&](chave=[^&#]+)/);
+      return { url: TELAS_GITHUB[id] + (m ? '?' + m[1] : '') };
+    };
+  }
+
   function frameValido(o) {
     return !!(o && o.url && (Date.now() - o.t) < PRE_VALIDADE);
   }
@@ -923,7 +934,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     if (frameValido(o)) return Promise.resolve(o);
     if (o && o.pendente) return o.pendente;
     if (!o) o = criarFrame(s);
-    o.pendente = (s.id === 'cargatermica' ? Promise.resolve({ url: 'ct.html' }) : api({ acao: 'abrir', token: TOKEN, id: s.id })).then(function (d) {
+    o.pendente = (s.id === 'cargatermica' ? Promise.resolve({ url: 'ct.html' }) : api({ acao: 'abrir', token: TOKEN, id: s.id }).then(telaNoGithub_(s.id))).then(function (d) {
       o.url = d.url;
       o.t = Date.now();
       o.pendente = null;
