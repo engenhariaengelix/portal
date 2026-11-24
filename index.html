@@ -687,6 +687,8 @@ nav.abas button.on::before{background:var(--az-claro)}
     elevadores: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="m8 9 4-4 4 4"/><path d="m8 15 4 4 4-4"/>',
     email: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
     diario: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    relogio: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    admin: '<path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/>',
     geral: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>'
   };
 
@@ -1009,6 +1011,7 @@ nav.abas button.on::before{background:var(--az-claro)}
 
   function abrirSistema(s) {
     if (s.id === 'email') { abrirEmail(); return; }
+    if (s.id === 'ponto') { abrirPonto(); return; }
     if (s.id === 'controle' && !s.__completo && !EH_CLIENTE) { irPara('tarefas'); return; }
     if (s.emConstrucao) { avisar(s.nome + ' ainda está em construção.'); return; }
     if (s.externo) { window.open(s.link, '_blank'); return; }
@@ -1516,18 +1519,122 @@ nav.abas button.on::before{background:var(--az-claro)}
     var er = document.createElement('div'); er.className = 'cad-erro'; er.id = 'cad-erro';
     d.appendChild(b); d.appendChild(er); $('cad-corpo').appendChild(d);
   }
-  function cadFechar() { $('folha-cad').hidden = true; }
+  var PONTO_TIMER = null;
+  function cadFechar() { if (PONTO_TIMER) { clearInterval(PONTO_TIMER); PONTO_TIMER = null; } $('folha-cad').hidden = true; }
   function cadTratar(e, liberar) {
     if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
     cadErro(e && e.message ? e.message : 'Não foi possível concluir.');
     if (liberar) liberar();
   }
   function abrirCad(tipo) {
+    if (tipo === 'x-admin') {
+      if (PAPEL_ENG !== 'pleno') return;
+      $('cad-corpo').innerHTML = '';
+      $('folha-cad').hidden = false;
+      cadAdmin();
+      return;
+    }
     if (!ehGestor()) return;
     $('cad-corpo').innerHTML = '';
     $('folha-cad').hidden = false;
     if (tipo === 'x-novoimovel') cadNovoImovel();
     else if (tipo === 'x-novatarefa') cadNovaTarefa();
+  }
+
+  /* Ponto (somente pleno) */
+  var PONTO_ROT = ['Iniciar jornada', 'Sair para almoço', 'Voltar do almoço', 'Finalizar dia'];
+  var PONTO_NOMES = ['Iniciou o trabalho', 'Saiu para almoço', 'Voltou do almoço', 'Finalizou o dia'];
+  function abrirPonto() {
+    if (PAPEL_ENG !== 'pleno') return;
+    $('cad-titulo').textContent = 'Ponto';
+    $('cad-corpo').innerHTML = '<div class="vazio">Carregando…</div>';
+    $('folha-cad').hidden = false;
+    var tk = TOKEN;
+    api({ acao: 'ponto', token: TOKEN }).then(function (d) {
+      if (tk !== TOKEN) return;
+      desenharPonto(d);
+    }).catch(function (e) { $('cad-corpo').innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function desenharPonto(d) {
+    if (PONTO_TIMER) { clearInterval(PONTO_TIMER); PONTO_TIMER = null; }
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    var lista = document.createElement('div'); lista.className = 'det';
+    var ev = d.eventos || [];
+    if (!ev.length) lista.innerHTML = '<small>Nenhum registro hoje.</small>';
+    ev.forEach(function (x, i) {
+      var l = document.createElement('div');
+      l.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e3e8ef';
+      var a = document.createElement('span'); a.textContent = PONTO_NOMES[i] || x.evento;
+      var b = document.createElement('b'); b.textContent = x.hora;
+      l.appendChild(a); l.appendChild(b); lista.appendChild(l);
+    });
+    corpo.appendChild(lista);
+    var cont = document.createElement('div'); cont.className = 'det';
+    cont.style.cssText = 'text-align:center;font-size:22px;font-weight:bold;color:#1f3a5f';
+    corpo.appendChild(cont);
+    if (d.almocoSaida) {
+      var delta = (d.agora || Date.now()) - Date.now();
+      var tick = function () {
+        var rest = d.almocoSaida + 3600000 - (Date.now() + delta);
+        if (rest <= 0) { cont.textContent = 'Almoço: 1h completa'; return; }
+        var m = Math.floor(rest / 60000), sg = Math.floor((rest % 60000) / 1000);
+        cont.textContent = 'Almoço: faltam ' + (m < 10 ? '0' : '') + m + ':' + (sg < 10 ? '0' : '') + sg;
+      };
+      tick(); PONTO_TIMER = setInterval(tick, 1000);
+    }
+    var encerrado = d.proximo >= 4;
+    cadBotao(encerrado ? 'Jornada de hoje encerrada' : 'Registrar ponto — ' + PONTO_ROT[d.proximo], function (liberar) {
+      cadErro('');
+      var tk = TOKEN;
+      api({ acao: 'pontoRegistrar', token: TOKEN }).then(function (r) {
+        if (tk !== TOKEN) return;
+        desenharPonto(r);
+        if (r.aviso) avisar(r.aviso);
+      }).catch(function (e) {
+        if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
+        cadErro('Não registrou. ' + (e && e.message && !/fetch|network|failed/i.test(e.message) ? e.message : 'Verifique a internet e tente de novo.'));
+        liberar();
+      });
+    });
+    if (encerrado) { var bt = corpo.querySelector('button.mini'); if (bt) { bt.disabled = true; bt.onclick = null; bt.replaceWith(bt.cloneNode(true)); corpo.querySelector('button.mini').disabled = true; } }
+  }
+
+  /* Administração do app (somente pleno) */
+  function fmtData(ms) { var d = new Date(ms); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  function cadAdmin() {
+    $('cad-titulo').textContent = 'Administração do app';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    var tk = TOKEN;
+    api({ acao: 'sessoesAdmin', token: TOKEN }).then(function (d) {
+      if (tk !== TOKEN) return;
+      desenharSessoes(d.sessoes || []);
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function desenharSessoes(lista) {
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    var t = document.createElement('div'); t.className = 'det';
+    t.innerHTML = '<small>Aparelhos conectados ao app. Encerrar uma sessão obriga a pessoa a entrar de novo.</small>';
+    corpo.appendChild(t);
+    if (!lista.length) corpo.innerHTML += '<div class="vazio">Nenhuma sessão ativa.</div>';
+    lista.forEach(function (x) {
+      var d = document.createElement('div'); d.className = 'det';
+      var a = document.createElement('div'); a.style.fontWeight = 'bold'; a.textContent = x.nome + (x.atual ? ' (você, agora)' : '');
+      var b = document.createElement('small'); b.textContent = (x.aparelho || 'Aparelho') + ' · último uso ' + fmtData(x.ultimo);
+      d.appendChild(a); d.appendChild(b);
+      if (!x.atual) {
+        var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'mini'; bt.textContent = 'Encerrar';
+        bt.style.cssText = 'display:block;margin-top:8px;min-height:40px';
+        bt.addEventListener('click', function () {
+          bt.disabled = true;
+          api({ acao: 'revogarSessao', token: TOKEN, id: x.id }).then(function (r) {
+            desenharSessoes(r.sessoes || []); avisar('Sessão encerrada.');
+          }).catch(function (e) { bt.disabled = false; cadTratar(e); });
+        });
+        d.appendChild(bt);
+      }
+      corpo.appendChild(d);
+    });
+    var er = document.createElement('div'); er.className = 'cad-erro'; er.id = 'cad-erro'; corpo.appendChild(er);
   }
   var IMOVEIS_BUSCA = null;
   function abrirImoveis() {
@@ -2052,6 +2159,7 @@ nav.abas button.on::before{background:var(--az-claro)}
       itens.push(['perfil', 'Perfil']);
       if (temCtl) itens.push(['ctl', 'Controle de projetos']);
       if (temApps) itens.push(['apps', 'Aplicativos']);
+      if (PAPEL_ENG === 'pleno') itens.push(['x-admin', 'Administração do app']);
     }
     m.innerHTML = '';
     itens.forEach(function (it) {
@@ -2245,6 +2353,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   function sairLocal(msg) {
     TOKEN = '';
     limparPerfilTela();
+    try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('engelix_tela_') === 0) localStorage.removeItem(k); }); } catch (e) {}
     limparFrames();
     apagar(CHAVE);
     apagar(CHAVE_CACHE);

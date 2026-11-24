@@ -68,12 +68,38 @@
       '<br><br><button onclick="location.reload()" style="padding:8px 14px">Tentar de novo</button></div>';
   }
 
+  /* Cache da tela (A): mostra a ultima copia guardada na hora e atualiza em segundo plano.
+     Depois de uma atualizacao do app, a tela nova aparece na segunda abertura. */
+  var CACHE_VALIDADE = 6 * 3600 * 1000;
+  function chaveCache() { return 'engelix_tela_' + location.pathname; }
+  function preparar(html) {
+    html = String(html || '');
+    if (!/name=["']viewport["']/i.test(html)) {
+      html = html.replace(/<head[^>]*>/i, function (m) { return m + '<meta name="viewport" content="width=device-width, initial-scale=1">'; });
+    }
+    return html;
+  }
+  function lerCache() {
+    try {
+      var o = JSON.parse(localStorage.getItem(chaveCache()) || 'null');
+      if (o && o.html && (Date.now() - o.t) < CACHE_VALIDADE) return o.html;
+    } catch (e) {}
+    return null;
+  }
+  function gravarCache(html) {
+    try { localStorage.setItem(chaveCache(), JSON.stringify({ t: Date.now(), html: html })); } catch (e) {}
+  }
   function carregar() {
-    chamar('__pagina', []).then(function (html) {
-      html = String(html || '');
-      if (!/name=["']viewport["']/i.test(html)) {
-        html = html.replace(/<head[^>]*>/i, function (m) { return m + '<meta name="viewport" content="width=device-width, initial-scale=1">'; });
-      }
+    var guardada = lerCache();
+    var busca = chamar('__pagina', []);
+    if (guardada) {
+      document.open(); document.write(guardada); document.close();
+      busca.then(function (html) { gravarCache(preparar(html)); }, function () {});
+      return;
+    }
+    busca.then(function (html) {
+      html = preparar(html);
+      gravarCache(html);
       document.open();
       document.write(html);
       document.close();

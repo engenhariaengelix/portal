@@ -1,7 +1,7 @@
 // ENGELIX - service worker (etapa 1)
 // Guarda os arquivos do app no celular. Com internet, sempre busca a versao nova;
 // sem internet, abre a ultima versao guardada.
-var CACHE = 'engelix-v1';
+var CACHE = 'engelix-v2';
 var ARQUIVOS = [
   './',
   './index.html',
