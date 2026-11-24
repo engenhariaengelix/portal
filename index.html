@@ -1106,6 +1106,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
   function abrirTarefaDoAviso(n, jaTentou) {
     if (n.tipo === 'obra') return;
+    if (n.tipo === 'ambiente') { $('folha-notif').hidden = true; abrirCad('x-amb'); return; }
     if (n.tipo === 'exclusao') { avisar('Essa tarefa foi exclu\u00edda.'); return; }
     var x = acharTarefaDoAviso(n);
     if (x) { $('folha-notif').hidden = true; abrirDetalhe(x); return; }
@@ -1527,6 +1528,13 @@ nav.abas button.on::before{background:var(--az-claro)}
     if (liberar) liberar();
   }
   function abrirCad(tipo) {
+    if (tipo === 'x-amb') {
+      if (PAPEL_ENG !== 'pleno') return;
+      $('cad-corpo').innerHTML = '';
+      $('folha-cad').hidden = false;
+      cadAmbientes();
+      return;
+    }
     if (tipo === 'x-admin') {
       if (PAPEL_ENG !== 'pleno') return;
       $('cad-corpo').innerHTML = '';
@@ -1597,6 +1605,71 @@ nav.abas button.on::before{background:var(--az-claro)}
       });
     });
     if (encerrado) { var bt = corpo.querySelector('button.mini'); if (bt) { bt.disabled = true; bt.onclick = null; bt.replaceWith(bt.cloneNode(true)); corpo.querySelector('button.mini').disabled = true; } }
+  }
+
+
+  /* Ambientes novos: revisão única dos nomes que os Memoriais e a Carga Térmica não reconheceram (somente pleno) */
+  function cadAmbientes() {
+    $('cad-titulo').textContent = 'Ambientes novos';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    var tk = TOKEN;
+    api({ acao: 'ambientesNovos', token: TOKEN }).then(function (d) {
+      if (tk !== TOKEN) return;
+      desenharAmbientes(d);
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function ambSel(opcoes, vazio) {
+    var s = document.createElement('select'); s.style.cssText = 'width:100%;margin-top:6px';
+    if (vazio) { var o0 = document.createElement('option'); o0.value = ''; o0.textContent = vazio; s.appendChild(o0); }
+    opcoes.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o); });
+    return s;
+  }
+  function ambBotao(txt, fn) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = txt;
+    b.style.cssText = 'min-height:40px;margin:8px 8px 0 0'; b.addEventListener('click', fn); return b;
+  }
+  function desenharAmbientes(d) {
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    var t = document.createElement('div'); t.className = 'det';
+    t.innerHTML = '<small>Nomes de ambiente que não estão na lista oficial. Adicione à lista, junte a um ambiente que já existe ou ignore. Os Memoriais e a Carga Térmica passam a reconhecer o nome depois da sua decisão.</small>';
+    corpo.appendChild(t);
+    var lista = d.pendentes || [];
+    if (!lista.length) { var v = document.createElement('div'); v.className = 'vazio'; v.textContent = 'Nenhum ambiente aguardando aprovação.'; corpo.appendChild(v); }
+    lista.forEach(function (p) {
+      var c = document.createElement('div'); c.className = 'det';
+      var a = document.createElement('div'); a.style.fontWeight = 'bold'; a.textContent = p.nome;
+      var b = document.createElement('small'); b.textContent = 'Origem: ' + p.origens.join(', ') + (p.obras.length ? ' · ' + p.obras.join(', ') : '') + (p.qtd > 1 ? ' · ' + p.qtd + ' ocorrências' : '');
+      var area = document.createElement('div');
+      var botoes = document.createElement('div');
+      c.appendChild(a); c.appendChild(b); c.appendChild(botoes); c.appendChild(area);
+      function decidir(corpoReq, bts) {
+        bts.forEach(function (x) { x.disabled = true; });
+        corpoReq.acao = 'ambienteDecidir'; corpoReq.token = TOKEN; corpoReq.chave = p.chave;
+        api(corpoReq).then(function (r) { desenharAmbientes(r); avisar('Decisão registrada.'); })
+          .catch(function (e) { bts.forEach(function (x) { x.disabled = false; }); cadTratar(e); });
+      }
+      var bAdd = ambBotao('Adicionar à lista', null), bJun = ambBotao('Juntar a…', null), bIgn = ambBotao('Ignorar', null);
+      var todos = [bAdd, bJun, bIgn];
+      bAdd.onclick = function () {
+        area.innerHTML = '';
+        var nm = document.createElement('input'); nm.type = 'text'; nm.value = p.nome; nm.style.cssText = 'width:100%;margin-top:8px';
+        var gr = ambSel(d.grupos, 'Grupo do ambiente…');
+        var nu = ambSel(['Não', 'Sim']); 
+        var rn = document.createElement('small'); rn.style.display = 'block'; rn.textContent = 'Numerado? (Sim = leva número, como consultórios)';
+        area.appendChild(nm); area.appendChild(gr); area.appendChild(rn); area.appendChild(nu);
+        area.appendChild(ambBotao('Confirmar', function () { decidir({ decisao: 'adicionar', nome: nm.value, grupo: gr.value, numerado: nu.value }, todos); }));
+      };
+      bJun.onclick = function () {
+        area.innerHTML = '';
+        var s = ambSel(d.padroes, 'Juntar com o ambiente…');
+        area.appendChild(s);
+        area.appendChild(ambBotao('Confirmar', function () { decidir({ decisao: 'juntar', destino: s.value }, todos); }));
+      };
+      bIgn.onclick = function () { decidir({ decisao: 'ignorar' }, todos); };
+      todos.forEach(function (x) { botoes.appendChild(x); });
+      corpo.appendChild(c);
+    });
+    var er = document.createElement('div'); er.className = 'cad-erro'; er.id = 'cad-erro'; corpo.appendChild(er);
   }
 
   /* Administração do app (somente pleno) */
@@ -2159,7 +2232,7 @@ nav.abas button.on::before{background:var(--az-claro)}
       itens.push(['perfil', 'Perfil']);
       if (temCtl) itens.push(['ctl', 'Controle de projetos']);
       if (temApps) itens.push(['apps', 'Aplicativos']);
-      if (PAPEL_ENG === 'pleno') itens.push(['x-admin', 'Administração do app']);
+      if (PAPEL_ENG === 'pleno') { itens.push(['x-amb', 'Ambientes novos']); itens.push(['x-admin', 'Administração do app']); }
     }
     m.innerHTML = '';
     itens.forEach(function (it) {
