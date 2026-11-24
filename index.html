@@ -2154,29 +2154,44 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
   function carregarPerfil() {
     if (!TOKEN) return;
+    var tk = TOKEN;
     api({ acao: 'perfil', token: TOKEN }).then(function (d) {
-      if (!TOKEN) return;
+      if (!TOKEN || TOKEN !== tk) return;
       PERFIL = d; gravarPerfil(); desenharPerfil();
     }).catch(function (e) { if (e && e.message === 'SESSAO_INVALIDA') tratarErro(e); });
   }
   function abrirPerfil() {
+    var nomeAtual = $('nome-perfil').textContent;
     if (!PERFIL) {
       var c = lerJson(CHAVE_PERFIL);
-      if (c && c.nome === $('nome-perfil').textContent && c.dados) PERFIL = c.dados;
+      if (c && c.nome === nomeAtual && c.dados) PERFIL = c.dados;
     }
+    if (!PERFIL) { limparPerfilTela(); $('pf-user').value = nomeAtual; }
     modoEdicao(false);
     carregarPerfil();
   }
   $('pf-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var b = $('pf-salvar'); b.disabled = true; b.textContent = 'Salvando…';
-    api({ acao: 'salvarPerfil', token: TOKEN, nomeCompleto: $('pf-nc').value, funcao: $('pf-fn').value, titulo: $('pf-ti').value,
-          telefone: $('pf-tel').value, email: $('pf-email').value }).then(function (d) {
-      PERFIL = d; gravarPerfil();
-      b.disabled = false; b.textContent = 'Salvar dados';
-      modoEdicao(false); avisar('Dados salvos.');
+    var campos = { nomeCompleto: $('pf-nc').value, funcao: $('pf-fn').value, titulo: $('pf-ti').value,
+                   telefone: $('pf-tel').value, email: $('pf-email').value };
+    var anterior = PERFIL;
+    var prov = {}; for (var k in (PERFIL || {})) prov[k] = PERFIL[k];
+    for (var c in campos) prov[c] = campos[c];
+    PERFIL = prov; gravarPerfil();
+    modoEdicao(false); avisar('Salvando…');
+    var tk = TOKEN;
+    api({ acao: 'salvarPerfil', token: TOKEN, nomeCompleto: campos.nomeCompleto, funcao: campos.funcao, titulo: campos.titulo,
+          telefone: campos.telefone, email: campos.email }).then(function (d) {
+      if (!TOKEN || TOKEN !== tk) return;
+      PERFIL = d; gravarPerfil(); desenharPerfil();
+      avisar('Dados salvos.');
     }).catch(function (e) {
-      b.disabled = false; b.textContent = 'Salvar dados'; tratarErro(e);
+      if (!TOKEN || TOKEN !== tk) return;
+      PERFIL = anterior; if (PERFIL) gravarPerfil();
+      modoEdicao(true);
+      $('pf-nc').value = campos.nomeCompleto; $('pf-fn').value = campos.funcao; $('pf-ti').value = campos.titulo;
+      $('pf-tel').value = campos.telefone; $('pf-email').value = campos.email;
+      tratarErro(e);
     });
   });
 
@@ -2220,8 +2235,16 @@ nav.abas button.on::before{background:var(--az-claro)}
     if (!EH_CLIENTE) iniciarPreCarga();
   }
 
+  function limparPerfilTela() {
+    ['pf-user', 'pf-nc', 'pf-fn', 'pf-ti', 'pf-tel', 'pf-email', 'pf-perfis'].forEach(function (id) { var e = $(id); if (e) e.value = ''; });
+    EDITANDO = false;
+    ['pf-nc', 'pf-ti', 'pf-fn', 'pf-tel', 'pf-email'].forEach(function (id) { var e = $(id); if (e) e.readOnly = true; });
+    $('pf-lapis').hidden = false; $('pf-salvar').hidden = true; $('pf-cancelar').hidden = true;
+  }
+
   function sairLocal(msg) {
     TOKEN = '';
+    limparPerfilTela();
     limparFrames();
     apagar(CHAVE);
     apagar(CHAVE_CACHE);
