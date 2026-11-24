@@ -83,6 +83,9 @@ nav.abas{flex:none}
 nav.abas{background:#fff;border-top:1px solid #c4ccd6;display:flex;padding:8px 12px max(10px, calc(env(safe-area-inset-bottom) - 14px))}
 nav.abas button{flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:#4f5d6b;font-size:12px}
 nav.abas button.on{color:#1f3a5f;font-weight:bold}
+#pto-janela{position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:200;background:#1f3a5f;color:#fff;padding:16px 18px;border-radius:14px;font-size:16px;font-weight:bold;max-width:90%;width:360px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#pto-janela[hidden]{display:none}
+#pto-janela button{display:block;margin:12px auto 0;min-height:44px;min-width:120px;border:0;border-radius:8px;background:#fff;color:#1f3a5f;font-size:16px;font-weight:bold}
 #aviso{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1f3a5f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;max-width:90%;text-align:center}
 #folha-notif{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end}
 #folha-notif .conteudo{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:4px}
@@ -677,6 +680,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   </div>
 </div>
 
+<div id="pto-janela" role="alert" hidden><div id="pto-janela-txt"></div><button type="button" id="pto-janela-fechar">Fechar</button></div>
 <div id="aviso" role="status" hidden></div>
 
 <script>
@@ -1573,6 +1577,11 @@ nav.abas button.on::before{background:var(--az-claro)}
       desenharPonto(d);
     }).catch(function (e) { $('cad-corpo').innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
   }
+  function pontoJanela(msg) {
+    $('pto-janela-txt').textContent = msg;
+    $('pto-janela').hidden = false;
+  }
+  $('pto-janela-fechar').addEventListener('click', function () { $('pto-janela').hidden = true; });
   function desenharPonto(d) {
     if (PONTO_TIMER) { clearInterval(PONTO_TIMER); PONTO_TIMER = null; }
     var corpo = $('cad-corpo'); corpo.innerHTML = '';
@@ -1590,13 +1599,25 @@ nav.abas button.on::before{background:var(--az-claro)}
     var cont = document.createElement('div'); cont.className = 'det';
     cont.style.cssText = 'text-align:center;font-size:22px;font-weight:bold;color:#1f3a5f';
     corpo.appendChild(cont);
-    if (d.almocoSaida) {
+    var atraso = document.createElement('div'); atraso.className = 'det';
+    atraso.style.cssText = 'text-align:center;font-size:22px;font-weight:bold;color:#c62828';
+    atraso.hidden = true; corpo.appendChild(atraso);
+    if (d.almocoSaida && d.proximo === 2) {
       var delta = (d.agora || Date.now()) - Date.now();
+      var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
       var tick = function () {
         var rest = d.almocoSaida + 3600000 - (Date.now() + delta);
-        if (rest <= 0) { cont.textContent = 'Almoço: 1h completa'; return; }
-        var m = Math.floor(rest / 60000), sg = Math.floor((rest % 60000) / 1000);
-        cont.textContent = 'Almoço: faltam ' + (m < 10 ? '0' : '') + m + ':' + (sg < 10 ? '0' : '') + sg;
+        if (rest > 0) {
+          var m = Math.floor(rest / 60000), sg = Math.floor((rest % 60000) / 1000);
+          cont.textContent = 'Almoço: faltam ' + p2(m) + ':' + p2(sg);
+          cont.style.color = '#1f3a5f'; atraso.hidden = true;
+        } else {
+          var ex = Math.floor(-rest / 1000), mm = Math.floor(ex / 60), ss = ex % 60;
+          cont.textContent = 'Almoço: -' + p2(mm) + ':' + p2(ss);
+          cont.style.color = '#c62828';
+          atraso.textContent = 'Você está atrasado(a) em ' + p2(mm) + ':' + p2(ss);
+          atraso.hidden = false;
+        }
       };
       tick(); PONTO_TIMER = setInterval(tick, 1000);
     }
@@ -1607,7 +1628,7 @@ nav.abas button.on::before{background:var(--az-claro)}
       api({ acao: 'pontoRegistrar', token: TOKEN }).then(function (r) {
         if (tk !== TOKEN) return;
         desenharPonto(r);
-        if (r.aviso) avisar(r.aviso);
+        if (r.aviso) pontoJanela(r.aviso);
       }).catch(function (e) {
         if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
         cadErro('Não registrou. ' + (e && e.message && !/fetch|network|failed/i.test(e.message) ? e.message : 'Verifique a internet e tente de novo.'));
