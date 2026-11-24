@@ -1762,6 +1762,13 @@ nav.abas button.on::before{background:var(--az-claro)}
 
   /* Administração do app (somente pleno) */
   function fmtData(ms) { var d = new Date(ms); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  var ABA_ANTES_ADM = 'inicio';
+  function botaoVoltarGrade(id, destino) {
+    var g = $(id), d = document.createElement('div'); d.style.cssText = 'padding:0 0 10px';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = '‹ Voltar';
+    b.style.cssText = 'min-height:40px;font-size:15px'; b.addEventListener('click', function () { irPara(typeof destino === 'function' ? destino() : destino); });
+    d.appendChild(b); g.insertBefore(d, g.firstChild);
+  }
   var ICO_ADM = { sessoes: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', apps: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M17.5 14v7M14 17.5h7"/>', amb: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 11h6M9 15h6"/>' };
   function gradeIcones(id, itens) {
     var g = $(id); g.innerHTML = '';
@@ -1779,11 +1786,13 @@ nav.abas button.on::before{background:var(--az-claro)}
       ['Sessões e aparelhos', 'Quem está conectado; encerrar sessões', function () { abrirModalCad(cadSessoes); }, ICO_ADM.sessoes],
       ['Apps associados', 'Ajustes dos apps ligados ao portal', function () { irPara('assoc'); }, ICO_ADM.apps]
     ]);
+    botaoVoltarGrade('grade-admin', function () { return ABA_ANTES_ADM || 'inicio'; });
   }
   function montarAssoc() {
     gradeIcones('grade-assoc', [
       ['Ambientes novos', 'Memoriais e Carga Térmica: nomes aguardando aprovação', function () { abrirModalCad(cadAmbientes); }, ICO_ADM.amb]
     ]);
+    botaoVoltarGrade('grade-assoc', 'admin');
   }
   function admVoltar() {
     var d = document.createElement('div'); d.className = 'det';
@@ -2130,6 +2139,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     if (!aba) return;
     if (EH_CLIENTE && aba !== 'perfil') aba = 'resumo';
     if ((aba === 'admin' || aba === 'assoc') && PAPEL_ENG !== 'pleno') aba = 'inicio';
+    if (aba === 'admin' && ABA_ATUAL !== 'admin' && ABA_ATUAL !== 'assoc') ABA_ANTES_ADM = ABA_ATUAL;
     ABA_ATUAL = aba;
     guardarAba(aba);
     ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'todas', 'imoveis', 'admin', 'assoc'].forEach(function (a) {
