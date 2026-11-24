@@ -1630,6 +1630,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
   function desenharAmbientes(d) {
     var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    corpo.appendChild(admVoltar());
     var t = document.createElement('div'); t.className = 'det';
     t.innerHTML = '<small>Nomes de ambiente que não estão na lista oficial. Adicione à lista, junte a um ambiente que já existe ou ignore. Os Memoriais e a Carga Térmica passam a reconhecer o nome depois da sua decisão.</small>';
     corpo.appendChild(t);
@@ -1674,8 +1675,35 @@ nav.abas button.on::before{background:var(--az-claro)}
 
   /* Administração do app (somente pleno) */
   function fmtData(ms) { var d = new Date(ms); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  function admVoltar() {
+    var d = document.createElement('div'); d.className = 'det';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = '‹ Voltar';
+    b.style.cssText = 'min-height:36px'; b.addEventListener('click', cadAdmin);
+    d.appendChild(b); return d;
+  }
   function cadAdmin() {
     $('cad-titulo').textContent = 'Administração do app';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    [['Sessões e aparelhos', 'Quem está conectado; encerrar sessões', cadSessoes], ['Apps associados', 'Ajustes dos apps ligados ao portal', cadApps]].forEach(function (x) {
+      var d = document.createElement('div'); d.className = 'det';
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = x[0];
+      b.style.cssText = 'width:100%;min-height:48px;font-size:16px;font-weight:bold';
+      var sm = document.createElement('small'); sm.textContent = x[1]; sm.style.display = 'block';
+      b.addEventListener('click', x[2]); d.appendChild(b); d.appendChild(sm); corpo.appendChild(d);
+    });
+  }
+  function cadApps() {
+    $('cad-titulo').textContent = 'Apps associados';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    corpo.appendChild(admVoltar());
+    var d = document.createElement('div'); d.className = 'det';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = 'Ambientes novos';
+    b.style.cssText = 'width:100%;min-height:48px;font-size:16px;font-weight:bold';
+    var sm = document.createElement('small'); sm.style.display = 'block'; sm.textContent = 'Memoriais e Carga Térmica: nomes de ambiente aguardando aprovação';
+    b.addEventListener('click', cadAmbientes); d.appendChild(b); d.appendChild(sm); corpo.appendChild(d);
+  }
+  function cadSessoes() {
+    $('cad-titulo').textContent = 'Sessões e aparelhos';
     var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
     var tk = TOKEN;
     api({ acao: 'sessoesAdmin', token: TOKEN }).then(function (d) {
@@ -1685,6 +1713,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
   function desenharSessoes(lista) {
     var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    corpo.appendChild(admVoltar());
     var t = document.createElement('div'); t.className = 'det';
     t.innerHTML = '<small>Aparelhos conectados ao app. Encerrar uma sessão obriga a pessoa a entrar de novo.</small>';
     corpo.appendChild(t);
@@ -2232,7 +2261,7 @@ nav.abas button.on::before{background:var(--az-claro)}
       itens.push(['perfil', 'Perfil']);
       if (temCtl) itens.push(['ctl', 'Controle de projetos']);
       if (temApps) itens.push(['apps', 'Aplicativos']);
-      if (PAPEL_ENG === 'pleno') { itens.push(['x-amb', 'Ambientes novos']); itens.push(['x-admin', 'Administração do app']); }
+      if (PAPEL_ENG === 'pleno') itens.push(['x-admin', 'Administração do app']);
     }
     m.innerHTML = '';
     itens.forEach(function (it) {
