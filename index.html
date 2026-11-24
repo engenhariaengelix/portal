@@ -580,6 +580,14 @@ nav.abas button.on::before{background:var(--az-claro)}
       <h2>Controle de projetos</h2>
       <div id="grade-ctl"></div>
     </div>
+    <div class="painel" id="painel-admin" hidden>
+      <h2>Administração do app</h2>
+      <div id="grade-admin"></div>
+    </div>
+    <div class="painel" id="painel-assoc" hidden>
+      <h2>Apps associados</h2>
+      <div id="grade-assoc"></div>
+    </div>
     <div class="painel" id="painel-imoveis" hidden>
       <h2>Edificações cadastradas</h2>
       <div id="imoveis-busca"></div>
@@ -1466,6 +1474,8 @@ nav.abas button.on::before{background:var(--az-claro)}
       l.push(['todas', 'Todas as tarefas', 'Edite as tarefas de todos', '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>']);
     }
     l.push(['imoveis', 'Edificações cadastradas', 'Dados cadastrais dos imóveis', '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/>']);
+    l.push(['x-entregues', 'Tarefas entregues', 'Tarefas já entregues das obras em andamento', '<path d="M20 6 9 17l-5-5"/>']);
+    l.push(['x-finalizadas', 'Obras finalizadas', 'Obras encerradas' + (ehGestor() ? ' (pode reabrir)' : ''), '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="m9 14 2 2 4-4"/>']);
     if (ehGestor()) {
       l.push(['x-novoimovel', 'Cadastrar imóvel', 'Nova edificação', '<path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6M9 14h6"/>']);
       l.push(['x-novatarefa', 'Cadastrar tarefa', 'Nova tarefa em uma obra', '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M12 11v6M9 14h6"/>']);
@@ -1528,18 +1538,18 @@ nav.abas button.on::before{background:var(--az-claro)}
     if (liberar) liberar();
   }
   function abrirCad(tipo) {
+    if (tipo === 'x-entregues' || tipo === 'x-finalizadas') {
+      if (EH_CLIENTE) return;
+      $('cad-corpo').innerHTML = '';
+      $('folha-cad').hidden = false;
+      if (tipo === 'x-entregues') cadEntregues(); else cadFinalizadas();
+      return;
+    }
     if (tipo === 'x-amb') {
       if (PAPEL_ENG !== 'pleno') return;
       $('cad-corpo').innerHTML = '';
       $('folha-cad').hidden = false;
       cadAmbientes();
-      return;
-    }
-    if (tipo === 'x-admin') {
-      if (PAPEL_ENG !== 'pleno') return;
-      $('cad-corpo').innerHTML = '';
-      $('folha-cad').hidden = false;
-      cadAdmin();
       return;
     }
     if (!ehGestor()) return;
@@ -1608,6 +1618,83 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
 
 
+
+  /* Tarefas entregues e Obras finalizadas (telas do Controle completo, agora no app) */
+  function cadEntregues() {
+    $('cad-titulo').textContent = 'Tarefas entregues';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    var tk = TOKEN;
+    api({ acao: 'entregues', token: TOKEN }).then(function (d) {
+      if (tk !== TOKEN) return;
+      corpo.innerHTML = '';
+      corpo.appendChild(admVoltar());
+      var lista = d.tarefas || [];
+      var busca = document.createElement('input'); busca.type = 'text'; busca.placeholder = 'Buscar obra, disciplina ou tarefa'; busca.autocomplete = 'off';
+      busca.style.cssText = 'width:100%;margin:6px 0';
+      corpo.appendChild(busca);
+      var box = document.createElement('div'); corpo.appendChild(box);
+      function desenhar() {
+        var q = busca.value.trim().toLowerCase(); box.innerHTML = '';
+        var itens = lista.filter(function (x) { return !q || (x.obra + ' ' + x.disciplina + ' ' + x.tarefa).toLowerCase().indexOf(q) >= 0; });
+        if (!itens.length) { box.innerHTML = '<div class="vazio">Nenhuma tarefa entregue.</div>'; return; }
+        var obra = '';
+        itens.forEach(function (x) {
+          if (x.obra !== obra) { obra = x.obra; var h = document.createElement('div'); h.style.cssText = 'font-weight:bold;color:#1f3a5f;margin:14px 0 4px'; h.textContent = obra; box.appendChild(h); }
+          var c = document.createElement('div'); c.className = 'det'; c.style.cursor = 'pointer';
+          var a = document.createElement('div'); a.style.fontWeight = 'bold'; a.textContent = x.disciplina + ' · ' + x.tarefa;
+          var b = document.createElement('small'); b.textContent = 'Revisão ' + (x.revisao || '—') + ' · Resp.: ' + (x.responsavel || '—') + (x.apoio && x.apoio !== '-' ? ' · Apoio: ' + x.apoio : '');
+          c.appendChild(a); c.appendChild(b);
+          c.addEventListener('click', function () { cadFechar(); abrirDetalhe(x); });
+          box.appendChild(c);
+        });
+      }
+      busca.oninput = desenhar; desenhar();
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function cadFinalizadas() {
+    $('cad-titulo').textContent = 'Obras finalizadas';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    var tk = TOKEN;
+    api({ acao: 'imoveis', token: TOKEN }).then(function (d) {
+      if (tk !== TOKEN) return;
+      desenharFinalizadas((d.imoveis || []).filter(function (x) { return x.finalizada; }));
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function desenharFinalizadas(lista) {
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    corpo.appendChild(admVoltar());
+    if (!lista.length) { var v = document.createElement('div'); v.className = 'vazio'; v.textContent = 'Nenhuma obra finalizada.'; corpo.appendChild(v); return; }
+    lista.forEach(function (x) {
+      var c = document.createElement('div'); c.className = 'det';
+      var a = document.createElement('div'); a.style.fontWeight = 'bold'; a.textContent = x.obra;
+      var b = document.createElement('small'); b.style.display = 'block'; b.textContent = x.endereco || '';
+      c.appendChild(a); c.appendChild(b);
+      if (ehGestor()) {
+        var area = document.createElement('div'); c.appendChild(area);
+        var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'mini'; bt.textContent = 'Reabrir obra';
+        bt.style.cssText = 'min-height:40px;margin-top:8px';
+        bt.addEventListener('click', function () {
+          bt.hidden = true; area.innerHTML = '';
+          var q = document.createElement('small'); q.style.display = 'block'; q.textContent = 'Reabrir ' + x.obra + '? Quem trabalha nela será avisado.';
+          var sim = document.createElement('button'); sim.type = 'button'; sim.className = 'mini'; sim.textContent = 'Sim, reabrir'; sim.style.cssText = 'min-height:40px;margin:6px 8px 0 0';
+          var nao = document.createElement('button'); nao.type = 'button'; nao.className = 'mini'; nao.textContent = 'Cancelar'; nao.style.cssText = 'min-height:40px;margin-top:6px';
+          nao.addEventListener('click', function () { area.innerHTML = ''; bt.hidden = false; });
+          sim.addEventListener('click', function () {
+            sim.disabled = true;
+            api({ acao: 'finalizarObra', token: TOKEN, obra: x.obra, finalizar: false }).then(function () {
+              ultimoResumo = 0; TODAS = null;
+              desenharFinalizadas(lista.filter(function (y) { return y !== x; })); avisar('Obra reaberta.');
+            }).catch(function (e) { sim.disabled = false; cadTratar(e); });
+          });
+          area.appendChild(q); area.appendChild(sim); area.appendChild(nao);
+        });
+        c.appendChild(bt);
+      }
+      corpo.appendChild(c);
+    });
+    var er = document.createElement('div'); er.className = 'cad-erro'; er.id = 'cad-erro'; corpo.appendChild(er);
+  }
+
   /* Ambientes novos: revisão única dos nomes que os Memoriais e a Carga Térmica não reconheceram (somente pleno) */
   function cadAmbientes() {
     $('cad-titulo').textContent = 'Ambientes novos';
@@ -1675,32 +1762,34 @@ nav.abas button.on::before{background:var(--az-claro)}
 
   /* Administração do app (somente pleno) */
   function fmtData(ms) { var d = new Date(ms); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+  var ICO_ADM = { sessoes: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', apps: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M17.5 14v7M14 17.5h7"/>', amb: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 11h6M9 15h6"/>' };
+  function gradeIcones(id, itens) {
+    var g = $(id); g.innerHTML = '';
+    itens.forEach(function (x) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'sis';
+      b.innerHTML = '<span class="ic"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1f3a5f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + x[3] + '</svg></span>';
+      var r = document.createElement('span'); r.className = 'nm'; r.textContent = x[0]; b.appendChild(r);
+      var d = document.createElement('span'); d.className = 'desc'; d.textContent = x[1]; b.appendChild(d);
+      b.addEventListener('click', x[2]); g.appendChild(b);
+    });
+  }
+  function abrirModalCad(fn) { $('cad-corpo').innerHTML = ''; $('folha-cad').hidden = false; fn(); }
+  function montarAdmin() {
+    gradeIcones('grade-admin', [
+      ['Sessões e aparelhos', 'Quem está conectado; encerrar sessões', function () { abrirModalCad(cadSessoes); }, ICO_ADM.sessoes],
+      ['Apps associados', 'Ajustes dos apps ligados ao portal', function () { irPara('assoc'); }, ICO_ADM.apps]
+    ]);
+  }
+  function montarAssoc() {
+    gradeIcones('grade-assoc', [
+      ['Ambientes novos', 'Memoriais e Carga Térmica: nomes aguardando aprovação', function () { abrirModalCad(cadAmbientes); }, ICO_ADM.amb]
+    ]);
+  }
   function admVoltar() {
     var d = document.createElement('div'); d.className = 'det';
     var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = '‹ Voltar';
-    b.style.cssText = 'min-height:36px'; b.addEventListener('click', cadAdmin);
+    b.style.cssText = 'min-height:36px'; b.addEventListener('click', cadFechar);
     d.appendChild(b); return d;
-  }
-  function cadAdmin() {
-    $('cad-titulo').textContent = 'Administração do app';
-    var corpo = $('cad-corpo'); corpo.innerHTML = '';
-    [['Sessões e aparelhos', 'Quem está conectado; encerrar sessões', cadSessoes], ['Apps associados', 'Ajustes dos apps ligados ao portal', cadApps]].forEach(function (x) {
-      var d = document.createElement('div'); d.className = 'det';
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = x[0];
-      b.style.cssText = 'width:100%;min-height:48px;font-size:16px;font-weight:bold';
-      var sm = document.createElement('small'); sm.textContent = x[1]; sm.style.display = 'block';
-      b.addEventListener('click', x[2]); d.appendChild(b); d.appendChild(sm); corpo.appendChild(d);
-    });
-  }
-  function cadApps() {
-    $('cad-titulo').textContent = 'Apps associados';
-    var corpo = $('cad-corpo'); corpo.innerHTML = '';
-    corpo.appendChild(admVoltar());
-    var d = document.createElement('div'); d.className = 'det';
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = 'Ambientes novos';
-    b.style.cssText = 'width:100%;min-height:48px;font-size:16px;font-weight:bold';
-    var sm = document.createElement('small'); sm.style.display = 'block'; sm.textContent = 'Memoriais e Carga Térmica: nomes de ambiente aguardando aprovação';
-    b.addEventListener('click', cadAmbientes); d.appendChild(b); d.appendChild(sm); corpo.appendChild(d);
   }
   function cadSessoes() {
     $('cad-titulo').textContent = 'Sessões e aparelhos';
@@ -2040,9 +2129,10 @@ nav.abas button.on::before{background:var(--az-claro)}
   function irPara(aba) {
     if (!aba) return;
     if (EH_CLIENTE && aba !== 'perfil') aba = 'resumo';
+    if ((aba === 'admin' || aba === 'assoc') && PAPEL_ENG !== 'pleno') aba = 'inicio';
     ABA_ATUAL = aba;
     guardarAba(aba);
-    ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'todas', 'imoveis'].forEach(function (a) {
+    ['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'todas', 'imoveis', 'admin', 'assoc'].forEach(function (a) {
       $('painel-' + a).hidden = a !== aba;
     });
     Array.prototype.forEach.call(document.querySelectorAll('nav.abas button'), function (b) {
@@ -2053,6 +2143,8 @@ nav.abas button.on::before{background:var(--az-claro)}
     fecharMenu();
     fecharCores();
     if (aba === 'ctl') montarCtl();
+    if (aba === 'admin') montarAdmin();
+    if (aba === 'assoc') montarAssoc();
     if (aba === 'todas') abrirTodas();
     if (aba === 'imoveis') abrirImoveis();
     if (aba === 'resumo') abrirResumo();
@@ -2261,7 +2353,7 @@ nav.abas button.on::before{background:var(--az-claro)}
       itens.push(['perfil', 'Perfil']);
       if (temCtl) itens.push(['ctl', 'Controle de projetos']);
       if (temApps) itens.push(['apps', 'Aplicativos']);
-      if (PAPEL_ENG === 'pleno') itens.push(['x-admin', 'Administração do app']);
+      if (PAPEL_ENG === 'pleno') itens.push(['admin', 'Administração do app']);
     }
     m.innerHTML = '';
     itens.forEach(function (it) {
