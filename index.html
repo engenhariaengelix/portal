@@ -2465,7 +2465,8 @@ nav.abas button.on::before{background:var(--az-claro)}
     try {
       var o = JSON.parse(localStorage.getItem(CHAVE_ABA) || 'null');
       if (!o || o.dia !== hojeStr()) return '';
-      if (['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'imoveis'].indexOf(o.aba) < 0 && !(o.aba === 'todas' && ehGestor())) return '';
+      if (['inicio', 'tarefas', 'resumo', 'perfil', 'apps', 'ctl', 'imoveis'].indexOf(o.aba) < 0 && !(o.aba === 'todas' && ehGestor()) &&
+          !((o.aba === 'admin' || o.aba === 'assoc') && PAPEL_ENG === 'pleno')) return '';
       return o.aba;
     } catch (e) { return ''; }
   }
