@@ -477,6 +477,21 @@ nav.abas button.on::before{background:var(--az-claro)}
 .btn-voltar-grade{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border:0;border-radius:999px;background:var(--az);color:#fff;font-size:16px;font-weight:700}
 .btn-voltar-grade:active{background:var(--az-esc)}
 @media (min-width:900px){#grade-admin,#grade-assoc{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px}}
+/* Filtros com multiseleção (lista com caixinhas) */
+.ms{position:relative;min-width:0}
+.ms-btn{display:block;width:100%;min-height:44px;box-sizing:border-box;border:1px solid #c4ccd6;border-radius:8px;background:#fff;color:#222;font-size:15px;text-align:left;padding:0 30px 0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.ms-btn::after{content:"";position:absolute;right:12px;top:50%;width:7px;height:7px;border-right:2px solid #1f3a5f;border-bottom:2px solid #1f3a5f;transform:translateY(-70%) rotate(45deg)}
+.ms-btn.on{border-color:#1f3a5f;font-weight:700;color:#1f3a5f}
+.ms-btn:focus{outline:0;border:2px solid #1f3a5f;padding-left:9px}
+.ms-lista{position:absolute;left:0;top:calc(100% + 4px);z-index:30;min-width:100%;width:max-content;max-width:min(420px,92vw);box-sizing:border-box;background:#fff;border:1px solid #c4ccd6;border-radius:10px;box-shadow:0 8px 24px rgba(31,58,95,.22);display:flex;flex-direction:column;overflow:hidden}
+.ms-lista[hidden]{display:none}
+.ms-corpo{max-height:280px;overflow:auto}
+.ms-item{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;font-size:15px;color:#222;border-bottom:1px solid #eef1f5;cursor:pointer}
+.ms-item input{width:20px;height:20px;flex:0 0 auto;margin:0;accent-color:#1f3a5f}
+.ms-item span{min-width:0;overflow-wrap:anywhere}
+.ms-limpar{min-height:44px;border:0;border-top:1px solid #e1e6ec;background:#f4f5f7;color:#1f3a5f;font-size:15px;font-weight:700}
+.filtros-campos .ms{width:100%}
+@media (min-width:900px){.filtros-campos .ms{width:auto;min-width:220px}}
 </style>
 </head>
 <body>
@@ -557,9 +572,9 @@ nav.abas button.on::before{background:var(--az-claro)}
       <div class="filtro" data-filtro></div>
       <div class="res-bar bar-obras"><h2>Obras</h2><button type="button" class="ico-btn" id="btn-filtros" aria-label="Filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.5V19l4 2v-8.5z"/></svg></button></div>
       <div class="filtros-campos" hidden>
-        <select id="sel-obra" aria-label="Obra"></select>
-        <select id="sel-disc" aria-label="Disciplina"></select>
-        <select id="sel-sit" aria-label="Situação"></select>
+        <div class="ms" id="sel-obra"></div>
+        <div class="ms" id="sel-disc"></div>
+        <div class="ms" id="sel-sit"></div>
         <button type="button" class="limpar" id="limpar-filtros" hidden>Limpar filtros</button>
       </div>
       <div class="cartao"><div id="lista-tarefas"></div></div>
@@ -717,7 +732,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   var TAREFAS = [];              // tarefas da pessoa (vêm do Controle; somente leitura)
   var TAREFAS_OK = false;        // true = equipe da Engenharia (cliente não vê tarefas)
   var CHAVE_TAREFAS = 'engelix_tarefas';
-  var fObra = '', fDisc = '', fSit = '';
+  var fObra = [], fDisc = [], fSit = [];   // multisseleção: listas vazias = todas
   var carregandoTarefas = false;
 
   var NOTIFS = [], NAO_LIDAS = 0, notifTimer = 0;
@@ -1266,7 +1281,7 @@ nav.abas button.on::before{background:var(--az-claro)}
 
   function passa(x) {
     if (filtro !== 'todas' && x.papel !== filtro) return false;
-    return (!fObra || x.obra === fObra) && (!fDisc || x.disciplina === fDisc) && (!fSit || x.situacao === fSit);
+    return msInclui(fObra, x.obra) && msInclui(fDisc, x.disciplina) && msInclui(fSit, x.situacao);
   }
 
   function usarCacheTarefas(nome) {
@@ -1292,7 +1307,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
 
   function abrirObra(o) {
-    fObra = o; fDisc = ''; fSit = '';
+    fObra = [o]; fDisc = []; fSit = [];
     desenharTarefas();
     if (window.matchMedia('(min-width:900px)').matches) {
       $('painel-tarefas').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1333,35 +1348,78 @@ nav.abas button.on::before{background:var(--az-claro)}
     });
   }
 
-  /* Filtros por Obra, Disciplina e Situação */
-  function preencherSelect(id, campo, todos, valor) {
-    var sel = $(id), vals = [];
+  /* Multisseleção: botão que abre uma lista com caixinhas (OU dentro do filtro, E entre filtros) */
+  var MS_BOX = null;
+  function msInclui(sel, v) { return !sel.length || sel.indexOf(v) >= 0; }
+  function msFechar() {
+    if (!MS_BOX) return;
+    MS_BOX._aberto = false;
+    var l = MS_BOX.querySelector('.ms-lista'); if (l) l.hidden = true;
+    MS_BOX = null;
+  }
+  document.addEventListener('click', function (ev) {
+    if (MS_BOX && !(ev.target.closest && ev.target.closest('.ms') === MS_BOX)) msFechar();
+  });
+  /* cfg: { todos, pl, vals, sel, mudou(novaLista) } */
+  function msDesenhar(box, cfg) {
+    var aberto = !!box._aberto, rol = box._rol || 0, n = cfg.sel.length;
+    box.innerHTML = '';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'ms-btn' + (n ? ' on' : '');
+    b.setAttribute('aria-label', cfg.todos);
+    b.textContent = n === 0 ? cfg.todos : (n === 1 ? cfg.sel[0] : n + ' ' + cfg.pl);
+    var lista = document.createElement('div'); lista.className = 'ms-lista'; lista.hidden = !aberto;
+    var corpo = document.createElement('div'); corpo.className = 'ms-corpo';
+    cfg.vals.forEach(function (v) {
+      var l = document.createElement('label'); l.className = 'ms-item';
+      var c = document.createElement('input'); c.type = 'checkbox'; c.checked = cfg.sel.indexOf(v) >= 0;
+      c.addEventListener('change', function () {
+        box._rol = corpo.scrollTop;
+        var novo = cfg.sel.filter(function (x) { return x !== v; });
+        if (c.checked) novo.push(v);
+        cfg.mudou(novo);
+      });
+      var t = document.createElement('span'); t.textContent = v;
+      l.appendChild(c); l.appendChild(t); corpo.appendChild(l);
+    });
+    lista.appendChild(corpo);
+    if (n) {
+      var lim = document.createElement('button'); lim.type = 'button'; lim.className = 'ms-limpar'; lim.textContent = 'Limpar';
+      lim.addEventListener('click', function () { box._rol = 0; cfg.mudou([]); });
+      lista.appendChild(lim);
+    }
+    b.addEventListener('click', function () {
+      var abrir = lista.hidden;
+      msFechar();
+      lista.hidden = !abrir;
+      box._aberto = abrir;
+      MS_BOX = abrir ? box : null;
+    });
+    box.appendChild(b); box.appendChild(lista);
+    if (aberto) { MS_BOX = box; corpo.scrollTop = rol; }
+  }
+
+  /* Filtros por Obra, Disciplina e Situação (Minhas tarefas) */
+  function preencherMulti(id, campo, todos, pl, sel, mudou) {
+    var vals = [];
     TAREFAS.forEach(function (x) {
       if (filtro !== 'todas' && x.papel !== filtro) return;
       if (x[campo] && vals.indexOf(x[campo]) < 0) vals.push(x[campo]);
     });
-    if (valor && vals.indexOf(valor) < 0) vals.push(valor);
+    sel.forEach(function (v) { if (vals.indexOf(v) < 0) vals.push(v); });
     vals.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
-    sel.innerHTML = '';
-    var o0 = document.createElement('option'); o0.value = ''; o0.textContent = todos; sel.appendChild(o0);
-    vals.forEach(function (v) {
-      var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
-    });
-    sel.value = valor;
+    msDesenhar($(id), { todos: todos, pl: pl, vals: vals, sel: sel, mudou: mudou });
   }
 
   function desenharFiltrosCampos() {
-    preencherSelect('sel-obra', 'obra', 'Todas as obras', fObra);
-    preencherSelect('sel-disc', 'disciplina', 'Todas as disciplinas', fDisc);
-    preencherSelect('sel-sit', 'situacao', 'Todas as situações', fSit);
-    $('limpar-filtros').hidden = !(fObra || fDisc || fSit);
-    $('btn-filtros').classList.toggle('ativo', !!(fObra || fDisc || fSit));
+    preencherMulti('sel-obra', 'obra', 'Todas as obras', 'obras', fObra, function (n) { fObra = n; desenharTarefas(); });
+    preencherMulti('sel-disc', 'disciplina', 'Todas as disciplinas', 'disciplinas', fDisc, function (n) { fDisc = n; desenharTarefas(); });
+    preencherMulti('sel-sit', 'situacao', 'Todas as situações', 'situações', fSit, function (n) { fSit = n; desenharTarefas(); });
+    var ativo = !!(fObra.length || fDisc.length || fSit.length);
+    $('limpar-filtros').hidden = !ativo;
+    $('btn-filtros').classList.toggle('ativo', ativo);
   }
 
-  $('sel-obra').addEventListener('change', function () { fObra = this.value; desenharTarefas(); });
-  $('sel-disc').addEventListener('change', function () { fDisc = this.value; desenharTarefas(); });
-  $('sel-sit').addEventListener('change', function () { fSit = this.value; desenharTarefas(); });
-  $('limpar-filtros').addEventListener('click', function () { fObra = ''; fDisc = ''; fSit = ''; desenharTarefas(); });
+  $('limpar-filtros').addEventListener('click', function () { fObra = []; fDisc = []; fSit = []; desenharTarefas(); });
 
   /* Aba Tarefas: todas as tarefas, agrupadas por obra (A–Z), com Não entregues e Prontas */
   function cartaoTarefa(x) {
@@ -1409,7 +1467,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
 
   /* Todas as tarefas (pleno e gerência) */
-  var TODAS = null, ultimaTodas = 0, carregandoTodas = false, FT = { obra: '', disc: '', resp: '', sit: '', q: '', enc: false };
+  var TODAS = null, ultimaTodas = 0, carregandoTodas = false, FT = { obra: [], disc: [], resp: [], sit: [], q: '', enc: false };
   function abrirTodas() {
     if (!ehGestor()) { irPara('inicio'); return; }
     if (!$('todas-filtros').firstChild) montarFiltrosTodas();
@@ -1434,10 +1492,8 @@ nav.abas button.on::before{background:var(--az-claro)}
     q.addEventListener('input', function () { FT.q = q.value.trim().toLowerCase(); desenharTodas(); });
     box.appendChild(q);
     var extra = document.createElement('div'); extra.className = 'todas-extra'; extra.id = 'todas-extra'; extra.hidden = true; box.appendChild(extra);
-    [['obra', 'Todas as obras'], ['disc', 'Todas as disciplinas'], ['resp', 'Todos os responsáveis'], ['sit', 'Todas as situações']].forEach(function (f) {
-      var s = document.createElement('select'); s.id = 'ft-' + f[0]; s.setAttribute('aria-label', f[1]);
-      var o = document.createElement('option'); o.value = ''; o.textContent = f[1]; s.appendChild(o);
-      s.addEventListener('change', function () { FT[f[0]] = s.value; desenharTodas(); });
+    ['obra', 'disc', 'resp', 'sit'].forEach(function (k) {
+      var s = document.createElement('div'); s.className = 'ms'; s.id = 'ft-' + k;
       extra.appendChild(s);
     });
     var l = document.createElement('label'); l.style.cssText = 'grid-column:1 / -1;font-size:13px;color:#4f5d6b;display:flex;gap:8px;align-items:center';
@@ -1447,29 +1503,27 @@ nav.abas button.on::before{background:var(--az-claro)}
     extra.appendChild(l);
   }
   function atualizarOpcoesTodas() {
-    [['obra', 'obra'], ['disc', 'disciplina'], ['resp', 'responsavel'], ['sit', 'situacao']].forEach(function (f) {
+    [['obra', 'obra', 'Todas as obras', 'obras'], ['disc', 'disciplina', 'Todas as disciplinas', 'disciplinas'],
+     ['resp', 'responsavel', 'Todos os responsáveis', 'responsáveis'], ['sit', 'situacao', 'Todas as situações', 'situações']].forEach(function (f) {
       var s = $('ft-' + f[0]); if (!s) return;
       var vals = [];
       (TODAS || []).forEach(function (x) { var v = x[f[1]]; if (v && vals.indexOf(v) < 0) vals.push(v); });
       vals.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
-      var atual = FT[f[0]];
-      while (s.options.length > 1) s.remove(1);
-      vals.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; s.appendChild(o); });
-      s.value = vals.indexOf(atual) >= 0 ? atual : '';
-      FT[f[0]] = s.value;
+      FT[f[0]] = FT[f[0]].filter(function (v) { return vals.indexOf(v) >= 0; });
+      msDesenhar(s, { todos: f[2], pl: f[3], vals: vals, sel: FT[f[0]], mudou: function (n) { FT[f[0]] = n; desenharTodas(); } });
     });
   }
   function desenharTodas() {
     var box = $('todas-lista');
     if (!TODAS) { box.innerHTML = '<div class="vazio">Carregando…</div>'; return; }
     atualizarOpcoesTodas();
-    $('btn-filtros-todas').classList.toggle('ativo', !!(FT.obra || FT.disc || FT.resp || FT.sit || !FT.enc));
+    $('btn-filtros-todas').classList.toggle('ativo', !!(FT.obra.length || FT.disc.length || FT.resp.length || FT.sit.length || !FT.enc));
     var lista = TODAS.filter(function (x) {
       if (!FT.enc && (x.encerrada || x.obraFinalizada)) return false;
-      if (FT.obra && x.obra !== FT.obra) return false;
-      if (FT.disc && x.disciplina !== FT.disc) return false;
-      if (FT.resp && x.responsavel !== FT.resp) return false;
-      if (FT.sit && x.situacao !== FT.sit) return false;
+      if (!msInclui(FT.obra, x.obra)) return false;
+      if (!msInclui(FT.disc, x.disciplina)) return false;
+      if (!msInclui(FT.resp, x.responsavel)) return false;
+      if (!msInclui(FT.sit, x.situacao)) return false;
       if (FT.q && (x.tarefa + ' ' + x.servico).toLowerCase().indexOf(FT.q) < 0) return false;
       return true;
     });
@@ -2905,7 +2959,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     apagar(CHAVE_PUSH);
     NOTIFS = []; NAO_LIDAS = 0; if (notifTimer) { clearInterval(notifTimer); notifTimer = 0; }
     document.body.className = document.body.className.replace(/\baba-\S+/g, '').trim();
-    TAREFAS = []; TAREFAS_OK = false; fObra = ''; fDisc = ''; fSit = '';
+    TAREFAS = []; TAREFAS_OK = false; fObra = []; fDisc = []; fSit = [];
     mostrarLogin(msg);
   }
 
