@@ -467,6 +467,16 @@ nav.abas button.on::before{background:var(--az-claro)}
   #painel-inicio .caixa-notif .nbtns{display:flex;flex-wrap:wrap;gap:8px 0}
 }
 
+/* Administração e Apps associados: cartões em lista */
+#grade-admin,#grade-assoc{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+#grade-admin .sis,#grade-assoc .sis{grid-column:auto;display:grid;grid-template-columns:64px minmax(0,1fr);grid-template-rows:auto auto;column-gap:14px;row-gap:2px;align-items:center;justify-items:start;text-align:left;width:100%;height:auto;background:#fff;border:1px solid var(--linha);border-radius:18px;padding:14px 16px;overflow:visible}
+#grade-admin .sis .ic,#grade-assoc .sis .ic{grid-row:1 / span 2;grid-column:1;width:64px;height:64px;border-radius:18px}
+#grade-admin .sis .ic svg,#grade-assoc .sis .ic svg{width:34px;height:34px}
+#grade-admin .sis .nm,#grade-assoc .sis .nm{grid-column:2;grid-row:1;align-self:end;font-size:17px;font-weight:700;color:var(--az);line-height:1.2}
+#grade-admin .sis .desc,#grade-assoc .sis .desc{grid-column:2;grid-row:2;align-self:start;display:block;font-size:13px;color:var(--cinza);line-height:1.35}
+.btn-voltar-grade{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border:0;border-radius:999px;background:var(--az);color:#fff;font-size:16px;font-weight:700}
+.btn-voltar-grade:active{background:var(--az-esc)}
+@media (min-width:900px){#grade-admin,#grade-assoc{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px}}
 </style>
 </head>
 <body>
@@ -2059,9 +2069,9 @@ nav.abas button.on::before{background:var(--az-claro)}
   function fmtData(ms) { var d = new Date(ms); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
   var ABA_ANTES_ADM = 'inicio';
   function botaoVoltarGrade(id, destino) {
-    var g = $(id), d = document.createElement('div'); d.style.cssText = 'padding:0 0 10px';
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'mini'; b.textContent = '‹ Voltar';
-    b.style.cssText = 'min-height:40px;font-size:15px'; b.addEventListener('click', function () { irPara(typeof destino === 'function' ? destino() : destino); });
+    var g = $(id), d = document.createElement('div'); d.style.cssText = 'padding:0 0 4px;grid-column:1 / -1';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'btn-voltar-grade'; b.textContent = '‹ Voltar';
+    b.addEventListener('click', function () { irPara(typeof destino === 'function' ? destino() : destino); });
     d.appendChild(b); g.insertBefore(d, g.firstChild);
   }
   var ICO_ADM = { sessoes: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', apps: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M17.5 14v7M14 17.5h7"/>', amb: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 11h6M9 15h6"/>', fer: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' };
