@@ -62,7 +62,12 @@ self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var alvo = (e.notification.data && e.notification.data.link) || './';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (lista) {
-    for (var i = 0; i < lista.length; i++) { if ('focus' in lista[i]) return lista[i].focus(); }
+    for (var i = 0; i < lista.length; i++) {
+      if ('focus' in lista[i]) {
+        lista[i].postMessage({ engelixLink: alvo }); // avisa o app aberto (ex.: abrir o Ponto)
+        return lista[i].focus();
+      }
+    }
     return self.clients.openWindow(alvo);
   }));
 });

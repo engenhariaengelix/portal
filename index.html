@@ -1015,6 +1015,10 @@ nav.abas button.on::before{background:var(--az-claro)}
   }
 
   window.addEventListener('popstate', function () { if (sisAberto) fecharSistema(true); });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (ev) {
+    var l = ev.data && ev.data.engelixLink;
+    if (l && /#ponto$/.test(l) && TOKEN) abrirPonto();
+  });
   window.addEventListener('message', function (ev) {
     if (ev.origin !== location.origin) return;
     if (ev.data && ev.data.engelixCT === 'portal' && sisAberto) fecharSistema(false);
@@ -1563,18 +1567,35 @@ nav.abas button.on::before{background:var(--az-claro)}
     else if (tipo === 'x-novatarefa') cadNovaTarefa();
   }
 
-  /* Ponto (somente pleno) */
+  /* Ponto (perfis liberados no servidor): Hoje, Minhas horas e Horas da equipe */
   var PONTO_ROT = ['Iniciar jornada', 'Sair para almoço', 'Voltar do almoço', 'Finalizar dia'];
-  var PONTO_NOMES = ['Iniciou o trabalho', 'Saiu para almoço', 'Voltou do almoço', 'Finalizou o dia'];
+  var PONTO_ROT_FALTA = ['Início do dia', 'Saída para o almoço', 'Volta do almoço', 'Finalização do dia'];
+  var PONTO_FALTAS_TXT = ['início do dia', 'saída para o almoço', 'volta do almoço', 'finalização do dia'];
+  var PT_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  var PT_DSEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  var PONTO_D = null, PONTO_ABA = 'hoje', PONTO_MES = '', PONTO_ALVO = '';
+  function pt2(n) { return (n < 10 ? '0' : '') + n; }
+  function pel(tag, css, txt) {
+    var e = document.createElement(tag);
+    if (css) e.style.cssText = css;
+    if (txt) e.textContent = txt;
+    return e;
+  }
+  function fmtHoras(min) { return Math.floor(min / 60) + 'h' + pt2(min % 60); }
+  function pontoDiaSem(dmy) {
+    var p = dmy.split('/');
+    return PT_DSEM[new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getDay()] + ' ' + p[0] + '/' + p[1];
+  }
   function abrirPonto() {
-    if (PAPEL_ENG !== 'pleno') return;
     $('cad-titulo').textContent = 'Ponto';
     $('cad-corpo').innerHTML = '<div class="vazio">Carregando…</div>';
     $('folha-cad').hidden = false;
+    PONTO_ABA = 'hoje'; PONTO_MES = ''; PONTO_ALVO = '';
     var tk = TOKEN;
     api({ acao: 'ponto', token: TOKEN }).then(function (d) {
       if (tk !== TOKEN) return;
-      desenharPonto(d);
+      PONTO_D = d;
+      desenharPonto();
     }).catch(function (e) { $('cad-corpo').innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
   }
   function pontoJanela(msg) {
@@ -1582,60 +1603,313 @@ nav.abas button.on::before{background:var(--az-claro)}
     $('pto-janela').hidden = false;
   }
   $('pto-janela-fechar').addEventListener('click', function () { $('pto-janela').hidden = true; });
-  function desenharPonto(d) {
+  function desenharPonto() {
     if (PONTO_TIMER) { clearInterval(PONTO_TIMER); PONTO_TIMER = null; }
-    var corpo = $('cad-corpo'); corpo.innerHTML = '';
-    var lista = document.createElement('div'); lista.className = 'det';
-    var ev = d.eventos || [];
-    if (!ev.length) lista.innerHTML = '<small>Nenhum registro hoje.</small>';
-    ev.forEach(function (x, i) {
-      var l = document.createElement('div');
-      l.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e3e8ef';
-      var a = document.createElement('span'); a.textContent = PONTO_NOMES[i] || x.evento;
-      var b = document.createElement('b'); b.textContent = x.hora;
-      l.appendChild(a); l.appendChild(b); lista.appendChild(l);
+    var corpo = $('cad-corpo'), d = PONTO_D;
+    corpo.innerHTML = '';
+    var abas = [['hoje', 'Hoje'], ['minhas', 'Minhas horas']];
+    if (d.equipe) abas.push(['equipe', 'Horas da equipe']);
+    var barra = pel('div', 'display:flex;gap:6px;margin-bottom:8px');
+    abas.forEach(function (a) {
+      var b = pel('button', 'flex:1;min-height:40px;border-radius:8px;font-size:14px;font-weight:700;border:1.5px solid #1f3a5f;' +
+        (PONTO_ABA === a[0] ? 'background:#1f3a5f;color:#fff' : 'background:#fff;color:#1f3a5f'), a[1]);
+      b.type = 'button';
+      b.addEventListener('click', function () { PONTO_ABA = a[0]; PONTO_ALVO = ''; desenharPonto(); });
+      barra.appendChild(b);
     });
-    corpo.appendChild(lista);
-    var cont = document.createElement('div'); cont.className = 'det';
-    cont.style.cssText = 'text-align:center;font-size:22px;font-weight:bold;color:#1f3a5f';
-    corpo.appendChild(cont);
-    var atraso = document.createElement('div'); atraso.className = 'det';
-    atraso.style.cssText = 'text-align:center;font-size:22px;font-weight:bold;color:#c62828';
-    atraso.hidden = true; corpo.appendChild(atraso);
+    corpo.appendChild(barra);
+    var box = pel('div', '');
+    corpo.appendChild(box);
+    if (PONTO_ABA === 'hoje') pontoHoje(box);
+    else if (PONTO_ABA === 'minhas') pontoHoras(box, '');
+    else pontoEquipe(box);
+  }
+  function pontoBotao(box, txt, claro, fn) {
+    var w = pel('div', ''); w.className = 'det';
+    var b = pel('button', 'width:100%;min-height:48px;border-radius:6px;font-size:16px;font-weight:bold;' +
+      (claro ? 'background:#fff;color:#1f3a5f;border:1.5px solid #1f3a5f' : ''), txt);
+    b.type = 'button'; b.className = 'mini';
+    b.addEventListener('click', function () { fn(b); });
+    w.appendChild(b); box.appendChild(w);
+    return b;
+  }
+  function pontoHoje(box) {
+    var d = PONTO_D, ev = d.eventos || [];
+    var lista = pel('div', ''); lista.className = 'det';
+    if (!ev.length) lista.innerHTML = '<small>Nenhum registro hoje.</small>';
+    ev.forEach(function (x) {
+      var l = pel('div', 'display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e3e8ef');
+      l.appendChild(pel('span', '', x.evento)); l.appendChild(pel('b', '', x.hora)); lista.appendChild(l);
+    });
+    box.appendChild(lista);
+    var cont = pel('div', 'text-align:center;font-size:22px;font-weight:bold;color:#1f3a5f'); cont.className = 'det'; box.appendChild(cont);
+    var atraso = pel('div', 'text-align:center;font-size:22px;font-weight:bold;color:#c62828'); atraso.className = 'det';
+    atraso.hidden = true; box.appendChild(atraso);
     if (d.almocoSaida && d.proximo === 2) {
       var delta = (d.agora || Date.now()) - Date.now();
-      var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
       var tick = function () {
         var rest = d.almocoSaida + 3600000 - (Date.now() + delta);
         if (rest > 0) {
           var m = Math.floor(rest / 60000), sg = Math.floor((rest % 60000) / 1000);
-          cont.textContent = 'Almoço: faltam ' + p2(m) + ':' + p2(sg);
+          cont.textContent = 'Almoço: faltam ' + pt2(m) + ':' + pt2(sg);
           cont.style.color = '#1f3a5f'; atraso.hidden = true;
         } else {
           var ex = Math.floor(-rest / 1000), mm = Math.floor(ex / 60), ss = ex % 60;
-          cont.textContent = 'Almoço: -' + p2(mm) + ':' + p2(ss);
+          cont.textContent = 'Almoço: -' + pt2(mm) + ':' + pt2(ss);
           cont.style.color = '#c62828';
-          atraso.textContent = 'Você está atrasado(a) em ' + p2(mm) + ':' + p2(ss);
+          atraso.textContent = 'Você está atrasado(a) em ' + pt2(mm) + ':' + pt2(ss);
           atraso.hidden = false;
         }
       };
       tick(); PONTO_TIMER = setInterval(tick, 1000);
     }
-    var encerrado = d.proximo >= 4;
-    cadBotao(encerrado ? 'Jornada de hoje encerrada' : 'Registrar ponto — ' + PONTO_ROT[d.proximo], function (liberar) {
-      cadErro('');
+    var avisos = [];
+    if (d.esquecida) avisos.push('A volta do almoço de hoje ficou sem registro. Registre o fim do dia e lance a volta em “Lançar horário que faltou”.');
+    if (d.pendencias && d.pendencias.length) {
+      avisos.push('Horários em aberto: ' + d.pendencias.map(function (p) { return p.data.slice(0, 5) + ' (' + p.falta.join(', ') + ')'; }).join('; ') + '. Toque em “Lançar horário que faltou”.');
+    }
+    avisos.forEach(function (t) {
+      var a = pel('div', 'background:#fff7e0;border:1px solid #f0d58a;color:#6b4e00;border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px', t);
+      box.appendChild(a);
+    });
+    var enc = d.proximo >= 4;
+    var bt = pontoBotao(box, enc ? 'Jornada de hoje encerrada' : 'Registrar ponto — ' + PONTO_ROT[d.proximo], false, function (b) {
+      b.disabled = true; cadErro('');
       var tk = TOKEN;
       api({ acao: 'pontoRegistrar', token: TOKEN }).then(function (r) {
         if (tk !== TOKEN) return;
-        desenharPonto(r);
+        PONTO_D = r;
+        desenharPonto();
         if (r.aviso) pontoJanela(r.aviso);
       }).catch(function (e) {
         if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
         cadErro('Não registrou. ' + (e && e.message && !/fetch|network|failed/i.test(e.message) ? e.message : 'Verifique a internet e tente de novo.'));
-        liberar();
+        b.disabled = false;
       });
     });
-    if (encerrado) { var bt = corpo.querySelector('button.mini'); if (bt) { bt.disabled = true; bt.onclick = null; bt.replaceWith(bt.cloneNode(true)); corpo.querySelector('button.mini').disabled = true; } }
+    if (enc) bt.disabled = true;
+    pontoBotao(box, 'Lançar horário que faltou', true, function () { pontoRetro(box); });
+    var er = pel('div', ''); er.className = 'cad-erro'; er.id = 'cad-erro'; box.appendChild(er);
+  }
+  function pontoCampo(box, rot, el) {
+    var w = pel('div', ''); w.className = 'det';
+    w.appendChild(pel('small', '', rot)); w.appendChild(el); box.appendChild(w);
+    return el;
+  }
+  function pontoSel(box, rot, itens, padrao) {
+    var s = pel('select', '');
+    itens.forEach(function (x) { var o = pel('option', '', x[1]); o.value = x[0]; s.appendChild(o); });
+    if (padrao !== undefined) s.value = padrao;
+    return pontoCampo(box, rot, s);
+  }
+  /* Lançamento retroativo: últimos 7 dias, a própria pessoa ou o pleno */
+  function pontoRetro(box) {
+    var d = PONTO_D;
+    box.innerHTML = '';
+    box.appendChild(pel('div', 'font-weight:700;color:#1f3a5f;font-size:17px', 'Lançar horário que faltou'));
+    var pessoa = null;
+    if (d.pessoas && d.pessoas.length > 1) {
+      pessoa = pontoSel(box, 'Pessoa', d.pessoas.map(function (n, i) { return [i === 0 ? '' : n, i === 0 ? n + ' (eu)' : n]; }), '');
+    }
+    var agoraD = new Date(d.agora || Date.now()), dias = [], i;
+    for (i = 0; i <= (d.retroDias || 7); i++) {
+      var x = new Date(agoraD.getTime() - i * 86400000);
+      dias.push([x.getFullYear() + '-' + pt2(x.getMonth() + 1) + '-' + pt2(x.getDate()),
+                 PT_DSEM[x.getDay()] + ' ' + pt2(x.getDate()) + '/' + pt2(x.getMonth() + 1) + (i === 0 ? ' (hoje)' : '')]);
+    }
+    var padDia = dias[0][0], padEv = d.esquecida ? 2 : 0;
+    if (d.pendencias && d.pendencias.length) {
+      var p = d.pendencias[0], q = p.data.split('/');
+      padDia = q[2] + '-' + q[1] + '-' + q[0];
+      padEv = Math.max(0, PONTO_FALTAS_TXT.indexOf(p.falta[0]));
+    }
+    var sDia = pontoSel(box, 'Dia', dias, padDia);
+    var sEv = pontoSel(box, 'Horário que faltou', PONTO_ROT_FALTA.map(function (t, k) { return [String(k), t]; }), String(padEv));
+    var hora = pel('input', ''); hora.type = 'time';
+    pontoCampo(box, 'Hora', hora);
+    pontoBotao(box, 'Lançar horário', false, function (b) {
+      cadErro('');
+      if (!hora.value) { cadErro('Digite a hora.'); return; }
+      b.disabled = true;
+      var tk = TOKEN;
+      api({ acao: 'pontoRetro', token: TOKEN, data: sDia.value, evento: Number(sEv.value), hora: hora.value, alvo: pessoa ? pessoa.value : '' }).then(function (r) {
+        if (tk !== TOKEN) return;
+        PONTO_D = r;
+        desenharPonto();
+        if (r.aviso) pontoJanela(r.aviso);
+      }).catch(function (e) {
+        if (e && e.message === 'SESSAO_INVALIDA') { tratarErro(e); return; }
+        cadErro(e && e.message && !/fetch|network|failed/i.test(e.message) ? e.message : 'Não lançou. Verifique a internet e tente de novo.');
+        b.disabled = false;
+      });
+    });
+    pontoBotao(box, 'Voltar', true, function () { desenharPonto(); });
+    var er = pel('div', ''); er.className = 'cad-erro'; er.id = 'cad-erro'; box.appendChild(er);
+  }
+  function pontoMesAtual() {
+    var a = new Date((PONTO_D && PONTO_D.agora) || Date.now());
+    return a.getFullYear() + '-' + pt2(a.getMonth() + 1);
+  }
+  function pontoSeletorMes(box, aoMudar) {
+    if (!PONTO_MES) PONTO_MES = pontoMesAtual();
+    var ano = Number(PONTO_MES.slice(0, 4)), mes = Number(PONTO_MES.slice(5, 7));
+    var barra = pel('div', 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 8px');
+    var css = 'min-height:40px;min-width:48px;font-size:20px;border:1.5px solid #1f3a5f;background:#fff;color:#1f3a5f;border-radius:8px';
+    var ant = pel('button', css, '‹'), prox = pel('button', css, '›');
+    ant.type = 'button'; prox.type = 'button';
+    prox.disabled = PONTO_MES >= pontoMesAtual();
+    var mover = function (n) {
+      var t = ano * 12 + (mes - 1) + n;
+      PONTO_MES = Math.floor(t / 12) + '-' + pt2(t % 12 + 1);
+      aoMudar();
+    };
+    ant.addEventListener('click', function () { mover(-1); });
+    prox.addEventListener('click', function () { mover(1); });
+    barra.appendChild(ant); barra.appendChild(pel('b', 'font-size:16px;color:#1f3a5f', PT_MESES[mes - 1] + ' de ' + ano)); barra.appendChild(prox);
+    box.appendChild(barra);
+  }
+  function pontoPendTexto(r) {
+    var out = [];
+    if (r.estimados && r.estimados.length) out.push('Pendente dia ' + r.estimados.join(', ') + ' – cálculo estimado (almoço de 1h)');
+    if (r.naoCalculados && r.naoCalculados.length) out.push('Pendente dia ' + r.naoCalculados.join(', ') + ' – não calculado (falta início ou fim do dia)');
+    return out;
+  }
+  function pontoHoras(box, alvo) {
+    box.innerHTML = '';
+    pontoSeletorMes(box, function () { pontoHoras(box, alvo); });
+    var res = pel('div', ''); box.appendChild(res);
+    res.appendChild(pel('div', 'text-align:center;padding:14px;color:#4f5d6b', 'Carregando…'));
+    var tk = TOKEN, mes = PONTO_MES;
+    api({ acao: 'pontoHoras', token: TOKEN, mes: PONTO_MES, alvo: alvo || '' }).then(function (r) {
+      if (tk !== TOKEN || mes !== PONTO_MES) return;
+      res.innerHTML = '';
+      if (alvo) res.appendChild(pel('div', 'font-weight:700;color:#1f3a5f;font-size:17px;margin-bottom:4px', r.nome));
+      res.appendChild(pel('div', 'text-align:center;font-size:24px;font-weight:bold;color:#1f3a5f;padding:6px 0', 'Total do mês: ' + fmtHoras(r.total)));
+      pontoPendTexto(r).forEach(function (t) {
+        res.appendChild(pel('div', 'background:#fff7e0;border:1px solid #f0d58a;color:#6b4e00;border-radius:8px;padding:8px 12px;font-size:14px;margin-top:6px', t));
+      });
+      if (!r.dias.length) { res.appendChild(pel('div', 'text-align:center;padding:14px;color:#4f5d6b', 'Nenhum registro neste mês.')); return; }
+      r.dias.forEach(function (x) {
+        var l = pel('div', 'display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e3e8ef');
+        var e = pel('div', '');
+        e.appendChild(pel('b', 'display:block;font-size:15px', pontoDiaSem(x.data)));
+        e.appendChild(pel('small', 'color:#4f5d6b', (x.ini || '--:--') + ' – ' + (x.sai || '--:--') + '  |  ' + (x.vol || '--:--') + ' – ' + (x.fim || '--:--')));
+        var h = pel('div', 'text-align:right;font-weight:700;color:#1f3a5f;white-space:nowrap');
+        if (x.estado === 'ok') h.textContent = fmtHoras(x.min);
+        else if (x.estado === 'estimado') { h.textContent = fmtHoras(x.min); h.appendChild(pel('small', 'display:block;font-weight:400;color:#8a6200', 'estimado')); }
+        else if (x.estado === 'andamento') { h.textContent = 'hoje'; h.appendChild(pel('small', 'display:block;font-weight:400;color:#4f5d6b', 'em andamento')); }
+        else { h.textContent = '—'; h.appendChild(pel('small', 'display:block;font-weight:400;color:#8a6200', 'não calculado')); }
+        l.appendChild(e); l.appendChild(h); res.appendChild(l);
+      });
+    }).catch(function (e) {
+      res.innerHTML = '';
+      res.appendChild(pel('div', 'color:#c62828;padding:8px 0', e && e.message && e.message !== 'SESSAO_INVALIDA' ? e.message : 'Não foi possível carregar.'));
+      if (e && e.message === 'SESSAO_INVALIDA') tratarErro(e);
+    });
+  }
+  function pontoEquipe(box) {
+    box.innerHTML = '';
+    if (PONTO_ALVO) {
+      var v = pel('button', 'min-height:40px;font-size:15px;margin-bottom:6px', '‹ Equipe'); v.type = 'button'; v.className = 'mini';
+      v.addEventListener('click', function () { PONTO_ALVO = ''; pontoEquipe(box); });
+      box.appendChild(v);
+      var cont = pel('div', ''); box.appendChild(cont);
+      pontoHoras(cont, PONTO_ALVO);
+      return;
+    }
+    pontoSeletorMes(box, function () { pontoEquipe(box); });
+    var res = pel('div', ''); box.appendChild(res);
+    res.appendChild(pel('div', 'text-align:center;padding:14px;color:#4f5d6b', 'Carregando…'));
+    var tk = TOKEN, mes = PONTO_MES;
+    api({ acao: 'pontoEquipe', token: TOKEN, mes: PONTO_MES }).then(function (r) {
+      if (tk !== TOKEN || mes !== PONTO_MES) return;
+      res.innerHTML = '';
+      r.pessoas.forEach(function (p) {
+        var b = pel('button', 'display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #c9d3df;border-radius:10px;padding:12px 14px;margin-top:8px');
+        b.type = 'button';
+        var topo = pel('div', 'display:flex;justify-content:space-between;align-items:center;gap:8px');
+        topo.appendChild(pel('b', 'font-size:16px;color:#1f3a5f', p.nome));
+        topo.appendChild(pel('b', 'font-size:18px;color:#1f3a5f', fmtHoras(p.total)));
+        b.appendChild(topo);
+        pontoPendTexto(p).forEach(function (t) { b.appendChild(pel('div', 'font-size:13px;color:#8a6200;margin-top:4px', t)); });
+        if (!p.diasComRegistro) b.appendChild(pel('div', 'font-size:13px;color:#4f5d6b;margin-top:4px', 'Sem registro neste mês'));
+        b.addEventListener('click', function () { PONTO_ALVO = p.nome; pontoEquipe(box); });
+        res.appendChild(b);
+      });
+    }).catch(function (e) {
+      res.innerHTML = '';
+      res.appendChild(pel('div', 'color:#c62828;padding:8px 0', e && e.message && e.message !== 'SESSAO_INVALIDA' ? e.message : 'Não foi possível carregar.'));
+      if (e && e.message === 'SESSAO_INVALIDA') tratarErro(e);
+    });
+  }
+
+  /* Administração: feriados e pontos facultativos (só pleno) */
+  var FER_ANO = 0;
+  function cadFeriados(ano) {
+    $('cad-titulo').textContent = 'Feriados e pontos facultativos';
+    var corpo = $('cad-corpo'); corpo.innerHTML = '<div class="vazio">Carregando…</div>';
+    var tk = TOKEN;
+    api({ acao: 'feriados', token: TOKEN, ano: ano || FER_ANO || '' }).then(function (d) {
+      if (tk !== TOKEN) return;
+      FER_ANO = d.ano;
+      desenharFeriados(d);
+    }).catch(function (e) { corpo.innerHTML = '<div class="vazio">Não foi possível carregar.</div>'; cadTratar(e); });
+  }
+  function feriadoSalvar(x, situacao, nome) {
+    cadErro('');
+    var tk = TOKEN;
+    api({ acao: 'feriadoSalvar', token: TOKEN, data: x, situacao: situacao, nome: nome || '' }).then(function (d) {
+      if (tk !== TOKEN) return;
+      FER_ANO = d.ano;
+      desenharFeriados(d);
+    }).catch(function (e) { cadTratar(e); });
+  }
+  function desenharFeriados(d) {
+    var corpo = $('cad-corpo'); corpo.innerHTML = '';
+    corpo.appendChild(admVoltar());
+    var css = 'min-height:40px;min-width:48px;font-size:20px;border:1.5px solid #1f3a5f;background:#fff;color:#1f3a5f;border-radius:8px';
+    var barra = pel('div', 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0');
+    var ant = pel('button', css, '‹'), prox = pel('button', css, '›');
+    ant.type = 'button'; prox.type = 'button';
+    ant.addEventListener('click', function () { cadFeriados(d.ano - 1); });
+    prox.addEventListener('click', function () { cadFeriados(d.ano + 1); });
+    barra.appendChild(ant); barra.appendChild(pel('b', 'font-size:17px;color:#1f3a5f', String(d.ano))); barra.appendChild(prox);
+    corpo.appendChild(barra);
+    corpo.appendChild(pel('div', 'font-size:13px;color:#4f5d6b;margin-bottom:6px', 'Nos pontos facultativos (Carnaval etc.), escolha se o Ponto trata o dia como feriado ou como dia normal de trabalho. Nos feriados o app não envia avisos de ponto.'));
+    d.lista.forEach(function (x) {
+      var p = x.data.split('-');
+      var l = pel('div', 'display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e3e8ef');
+      var e = pel('div', '');
+      e.appendChild(pel('b', 'display:block;font-size:15px', PT_DSEM[new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay()] + ' ' + p[2] + '/' + p[1]));
+      e.appendChild(pel('small', 'color:#4f5d6b', x.nome + (x.tipo === 'extra' ? ' (folga do escritório)' : '')));
+      l.appendChild(e);
+      var dir = pel('div', 'display:flex;gap:6px;align-items:center');
+      if (x.tipo === 'fixo') dir.appendChild(pel('span', 'font-weight:700;color:#1f3a5f', 'Feriado'));
+      else {
+        var feriado = x.situacao === 'Feriado';
+        var t = pel('button', 'min-height:38px;padding:0 12px;border-radius:8px;font-size:14px;font-weight:700;border:1.5px solid #1f3a5f;' +
+          (feriado ? 'background:#1f3a5f;color:#fff' : 'background:#fff;color:#1f3a5f'), feriado ? 'Feriado' : 'Dia normal');
+        t.type = 'button';
+        t.addEventListener('click', function () { feriadoSalvar(x.data, feriado ? 'Dia normal' : 'Feriado', x.nome); });
+        dir.appendChild(t);
+        if (x.tipo === 'extra') {
+          var r = pel('button', 'min-height:38px;padding:0 10px;border-radius:8px;font-size:14px;border:1.5px solid #c62828;background:#fff;color:#c62828', 'Remover');
+          r.type = 'button';
+          r.addEventListener('click', function () { feriadoSalvar(x.data, 'Remover', x.nome); });
+          dir.appendChild(r);
+        }
+      }
+      l.appendChild(dir); corpo.appendChild(l);
+    });
+    corpo.appendChild(pel('div', 'font-weight:700;color:#1f3a5f;margin-top:14px', 'Adicionar folga do escritório'));
+    var dt = pel('input', ''); dt.type = 'date';
+    var nm = pel('input', ''); nm.type = 'text'; nm.maxLength = 60; nm.placeholder = 'Nome (ex.: Recesso)';
+    pontoCampo(corpo, 'Data', dt); pontoCampo(corpo, 'Nome', nm);
+    pontoBotao(corpo, 'Adicionar como feriado', false, function () {
+      if (!dt.value) { cadErro('Escolha a data.'); return; }
+      feriadoSalvar(dt.value, 'Feriado', nm.value);
+    });
+    var er = pel('div', ''); er.className = 'cad-erro'; er.id = 'cad-erro'; corpo.appendChild(er);
   }
 
 
@@ -1790,7 +2064,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     b.style.cssText = 'min-height:40px;font-size:15px'; b.addEventListener('click', function () { irPara(typeof destino === 'function' ? destino() : destino); });
     d.appendChild(b); g.insertBefore(d, g.firstChild);
   }
-  var ICO_ADM = { sessoes: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', apps: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M17.5 14v7M14 17.5h7"/>', amb: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 11h6M9 15h6"/>' };
+  var ICO_ADM = { sessoes: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>', apps: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M17.5 14v7M14 17.5h7"/>', amb: '<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 11h6M9 15h6"/>', fer: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>' };
   function gradeIcones(id, itens) {
     var g = $(id); g.innerHTML = '';
     itens.forEach(function (x) {
@@ -1805,6 +2079,7 @@ nav.abas button.on::before{background:var(--az-claro)}
   function montarAdmin() {
     gradeIcones('grade-admin', [
       ['Sessões e aparelhos', 'Quem está conectado; encerrar sessões', function () { abrirModalCad(cadSessoes); }, ICO_ADM.sessoes],
+      ['Feriados e pontos facultativos', 'Defina o que é folga no Ponto', function () { abrirModalCad(function () { cadFeriados(); }); }, ICO_ADM.fer],
       ['Apps associados', 'Ajustes dos apps ligados ao portal', function () { irPara('assoc'); }, ICO_ADM.apps]
     ]);
     botaoVoltarGrade('grade-admin', function () { return ABA_ANTES_ADM || 'inicio'; });
@@ -2566,6 +2841,7 @@ nav.abas button.on::before{background:var(--az-claro)}
     $('tela-login').hidden = true;
     $('tela-app').hidden = false;
     if (!EH_CLIENTE) iniciarPreCarga();
+    if (/#ponto$/.test(location.hash)) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} abrirPonto(); }
   }
 
   function limparPerfilTela() {
